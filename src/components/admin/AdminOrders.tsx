@@ -40,6 +40,8 @@ export default function AdminOrders() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [, setTick] = useState(0);
+  const [cancelTarget, setCancelTarget] = useState<string | null>(null);
+  const [cancelCode, setCancelCode] = useState('');
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -111,13 +113,24 @@ export default function AdminOrders() {
         {timeSince(order.createdAt)}
       </div>
       {type === 'new' && (
-        <button
-          className="adm-pane-card-btn accept"
-          onClick={() => callAction('/api/order-start', order.id)}
-          disabled={actionLoading === order.id}
-        >
-          {actionLoading === order.id ? '...' : 'START PREPARING'}
-        </button>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button
+            className="adm-pane-card-btn accept"
+            style={{ flex: 1 }}
+            onClick={() => callAction('/api/order-start', order.id)}
+            disabled={actionLoading === order.id}
+          >
+            {actionLoading === order.id ? '...' : 'START PREPARING'}
+          </button>
+          <button
+            className="adm-pane-card-btn cancel"
+            style={{ flex: 0, minWidth: 80 }}
+            onClick={() => { setCancelTarget(order.id); setCancelCode(''); }}
+            disabled={actionLoading === order.id}
+          >
+            CANCEL
+          </button>
+        </div>
       )}
       {type === 'preparing' && (
         <button
@@ -168,7 +181,7 @@ export default function AdminOrders() {
           {/* NEW */}
           <div className="adm-pane">
             <div className="adm-pane-header">
-              <span className="adm-pane-title">New</span>
+              <span className="adm-pane-title">New QR Orders</span>
               <span className={`adm-pane-badge red`}>{newOrders.length}</span>
             </div>
             <div className="adm-pane-cards">
@@ -207,6 +220,40 @@ export default function AdminOrders() {
               ) : (
                 readyOrders.map((o) => renderCard(o, 'ready'))
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel confirmation modal */}
+      {cancelTarget && (
+        <div className="adm-cancel-overlay" onClick={() => setCancelTarget(null)}>
+          <div className="adm-cancel-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>CANCEL ORDER</h3>
+            <p>Enter code <strong>1234</strong> to confirm cancellation.</p>
+            <input
+              type="text"
+              inputMode="numeric"
+              maxLength={4}
+              placeholder="Enter code"
+              value={cancelCode}
+              onChange={(e) => setCancelCode(e.target.value)}
+              autoFocus
+            />
+            <div className="adm-cancel-actions">
+              <button className="btn btn-ghost" onClick={() => setCancelTarget(null)}>BACK</button>
+              <button
+                className="btn adm-cancel-confirm"
+                disabled={cancelCode !== '1234' || actionLoading === cancelTarget}
+                onClick={async () => {
+                  if (cancelCode !== '1234') return;
+                  await callAction('/api/order-complete', cancelTarget);
+                  setCancelTarget(null);
+                  setCancelCode('');
+                }}
+              >
+                {actionLoading === cancelTarget ? '...' : 'CONFIRM CANCEL'}
+              </button>
             </div>
           </div>
         </div>
