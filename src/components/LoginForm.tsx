@@ -76,7 +76,7 @@ export default function LoginForm({ mode }: LoginFormProps) {
             marginBottom: '24px',
             color: 'var(--text-primary)',
           }}>
-            Staff Sign In
+            {t('account.staffSignIn')}
           </h3>
         )}
 
@@ -97,7 +97,7 @@ export default function LoginForm({ mode }: LoginFormProps) {
           />
           {error && <p className="auth-error">{error}</p>}
           <button className="btn btn-primary btn-full" type="submit" disabled={loading}>
-            {loading ? 'Please wait...' : tab === 'signup' ? t('account.createAccount') : t('account.signIn')}
+            {loading ? t('account.pleaseWait') : tab === 'signup' ? t('account.createAccount') : t('account.signIn')}
           </button>
         </form>
 

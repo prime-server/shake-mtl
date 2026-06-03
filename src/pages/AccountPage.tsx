@@ -4,7 +4,6 @@ import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { useLang } from '../context/LangContext';
 import LoginForm from '../components/LoginForm';
-import Ticker from '../components/Ticker';
 import Footer from '../components/Footer';
 
 interface OrderDoc {
@@ -22,11 +21,11 @@ const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
   completed: { bg: 'rgba(107,114,128,0.12)', color: '#6b7280' },
 };
 
-const STATUS_LABELS: Record<string, string> = {
-  pending_payment: 'Awaiting Payment',
-  preparing: 'Preparing',
-  ready: 'Ready',
-  completed: 'Completed',
+const STATUS_LABEL_KEYS: Record<string, string> = {
+  pending_payment: 'account.status.pending',
+  preparing: 'account.status.preparing',
+  ready: 'account.status.ready',
+  completed: 'account.status.completed',
 };
 
 export default function AccountPage() {
@@ -99,7 +98,6 @@ export default function AccountPage() {
         <div style={{ paddingBottom: '80px' }}>
           <LoginForm mode="customer" />
         </div>
-        <Ticker />
         <Footer />
       </>
     );
@@ -159,7 +157,7 @@ export default function AccountPage() {
                       className="order-history-status"
                       style={{ background: sc.bg, color: sc.color }}
                     >
-                      {STATUS_LABELS[order.status] || order.status}
+                      {STATUS_LABEL_KEYS[order.status] ? t(STATUS_LABEL_KEYS[order.status]) : order.status}
                     </span>
                     <div className="order-history-date">{formatDate(order.createdAt)}</div>
                   </div>
@@ -170,7 +168,6 @@ export default function AccountPage() {
         )}
       </div>
 
-      <Ticker />
       <Footer />
     </>
   );

@@ -16,6 +16,7 @@ import LoyaltyPage from './pages/LoyaltyPage';
 import CateringPage from './pages/CateringPage';
 import ContactPage from './pages/ContactPage';
 import AccountPage from './pages/AccountPage';
+import NotFoundPage from './pages/NotFoundPage';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -72,6 +73,7 @@ function AppShell() {
           <Route path="/catering" element={<CateringPage />} />
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/account" element={<AccountPage />} />
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </main>
 

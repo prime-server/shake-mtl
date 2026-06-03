@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
 const PLACE_ID = 'ChIJW9OgnwIYyUwRpAqIqA6I1tc';
+// Key restricted to Places API + domains: shakewebapp.web.app, shakemtl.com, localhost
 const API_KEY = 'AIzaSyDgRx73He8DAVKuwpZ2YQdxqkxY7jlKurU';
 const CACHE_KEY = 'shake_gym_hours';
 const CACHE_TTL = 60 * 1000; // 60 seconds — near real-time, still avoids redundant calls

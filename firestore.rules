@@ -11,6 +11,10 @@ service cloud.firestore {
       allow read: if request.auth != null
         && resource.data.customerEmail == request.auth.token.email;
     }
+    match /catering_inquiries/{docId} {
+      allow create: if true;
+      allow read, update, delete: if false;
+    }
     match /{document=**} {
       allow read, write: if false;
     }

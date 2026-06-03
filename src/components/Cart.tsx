@@ -40,11 +40,11 @@ export default function Cart({ items, subtotal, open, onClose, onUpdateQty, onRe
       const d = new Date();
       d.setDate(d.getDate() + i);
       const val = d.toISOString().split('T')[0];
-      const label = i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : `${dayNames[d.getDay()]} ${d.getMonth() + 1}/${d.getDate()}`;
+      const label = i === 0 ? t('cart.today') : i === 1 ? t('cart.tomorrow') : `${dayNames[d.getDay()]} ${d.getMonth() + 1}/${d.getDate()}`;
       days.push({ value: val, label });
     }
     return days;
-  }, []);
+  }, [t]);
 
   // Get time slots for selected date
   const timeSlots = useMemo(() => {
@@ -71,7 +71,7 @@ export default function Cart({ items, subtotal, open, onClose, onUpdateQty, onRe
   const handleCheckout = async () => {
     if (!name.trim()) { setError(t('cart.nameRequired')); return; }
     if (!phone.trim()) { setError(t('cart.phoneRequired')); return; }
-    if (pickupType === 'scheduled' && !pickupTime) { setError('Please select a pickup time'); return; }
+    if (pickupType === 'scheduled' && !pickupTime) { setError(t('cart.selectPickupTime')); return; }
     setError('');
     setLoading(true);
 
@@ -156,13 +156,13 @@ export default function Cart({ items, subtotal, open, onClose, onUpdateQty, onRe
                   className={`pickup-type-btn ${pickupType === 'asap' ? 'active' : ''}`}
                   onClick={() => setPickupType('asap')}
                 >
-                  ASAP (~15 min)
+                  {t('cart.asap')}
                 </button>
                 <button
                   className={`pickup-type-btn ${pickupType === 'scheduled' ? 'active' : ''}`}
                   onClick={() => setPickupType('scheduled')}
                 >
-                  Schedule
+                  {t('cart.schedule')}
                 </button>
               </div>
 
@@ -173,7 +173,7 @@ export default function Cart({ items, subtotal, open, onClose, onUpdateQty, onRe
                     value={pickupDate}
                     onChange={(e) => setPickupDate(e.target.value)}
                   >
-                    <option value="">Select date...</option>
+                    <option value="">{t('cart.selectDate')}</option>
                     {dateOptions.map((d) => (
                       <option key={d.value} value={d.value}>{d.label}</option>
                     ))}
@@ -186,13 +186,13 @@ export default function Cart({ items, subtotal, open, onClose, onUpdateQty, onRe
                         value={pickupTime}
                         onChange={(e) => setPickupTime(e.target.value)}
                       >
-                        <option value="">Select time...</option>
+                        <option value="">{t('cart.selectTime')}</option>
                         {timeSlots.map((slot) => (
                           <option key={slot} value={slot}>{slot}</option>
                         ))}
                       </select>
                     ) : (
-                      <p className="pickup-closed">Closed on this day</p>
+                      <p className="pickup-closed">{t('cart.closedDay')}</p>
                     )
                   )}
                 </div>

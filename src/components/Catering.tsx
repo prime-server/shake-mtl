@@ -1,4 +1,6 @@
 import { useState, type FormEvent } from 'react';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../firebase';
 import { useReveal } from '../hooks/useReveal';
 import { useLang } from '../context/LangContext';
 
@@ -13,10 +15,17 @@ export default function Catering() {
   const update = (field: string, value: string) =>
     setForm((f) => ({ ...f, [field]: value }));
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    console.log('Catering request:', form);
-    setSubmitted(true);
+    try {
+      await addDoc(collection(db, 'catering_inquiries'), {
+        ...form,
+        createdAt: serverTimestamp(),
+      });
+      setSubmitted(true);
+    } catch (err) {
+      console.error('Failed to submit catering request:', err);
+    }
   };
 
   return (
@@ -91,13 +100,13 @@ export default function Catering() {
                     <label htmlFor="cat-type">{t('catering.eventType')}</label>
                     <select id="cat-type" required value={form.type} onChange={(e) => update('type', e.target.value)}>
                       <option value="">{t('catering.select')}</option>
-                      <option>Gym Event</option>
-                      <option>Corporate</option>
-                      <option>Birthday</option>
-                      <option>Yoga / Pilates</option>
-                      <option>Sports Team</option>
-                      <option>Private Party</option>
-                      <option>Other</option>
+                      <option value="Gym Event">{t('catering.gymEvents')}</option>
+                      <option value="Corporate">{t('catering.corporate')}</option>
+                      <option value="Birthday">{t('catering.birthdays')}</option>
+                      <option value="Yoga / Pilates">{t('catering.yoga')}</option>
+                      <option value="Sports Team">{t('catering.sports')}</option>
+                      <option value="Private Party">{t('catering.private')}</option>
+                      <option value="Other">{t('catering.other')}</option>
                     </select>
                   </div>
                   <div className="form-group">

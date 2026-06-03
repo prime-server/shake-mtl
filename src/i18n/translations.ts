@@ -96,6 +96,14 @@ const translations: Record<string, Record<string, string>> = {
 
     // Social
     'social.heading': 'WHAT THE GYM SAYS',
+    'social.review1.text': 'Best post-workout smoothie in Montreal. The Peanut Power is insane \u2014 tastes like a milkshake but it\u2019s actually healthy.',
+    'social.review1.author': 'ALEX T.',
+    'social.review2.text': 'I order the Green Machine every morning before my workout. The QR ordering at my locker is a game changer.',
+    'social.review2.author': 'SARAH M.',
+    'social.review3.text': 'The immunity shots got me through flu season. Real ginger, real turmeric \u2014 you can taste the quality.',
+    'social.review3.author': 'JORDAN K.',
+    'social.review4.text': 'Protein Iced Coffee before 6 AM legs day. Nothing else compares. Fast pickup, never a long wait.',
+    'social.review4.author': 'MIKE D.',
     'social.follow': 'Follow us for daily specials and new drops',
     'social.instagram': '@SHAKEMTL ON INSTAGRAM',
 
@@ -124,6 +132,7 @@ const translations: Record<string, Record<string, string>> = {
     'catering.success': 'REQUEST RECEIVED!',
     'catering.successSub': "We'll be in touch within 24 hours.",
     'catering.select': 'Select...',
+    'catering.other': 'OTHER',
     'catering.findUs': 'FIND US',
 
     // Contact
@@ -159,6 +168,12 @@ const translations: Record<string, Record<string, string>> = {
     'account.perk2': 'Faster checkout with saved info',
     'account.perk3': 'Earn & redeem reward points',
     'account.perk4': 'Exclusive offers & early access',
+    'account.staffSignIn': 'STAFF SIGN IN',
+    'account.pleaseWait': 'Please wait...',
+    'account.status.pending': 'Awaiting Payment',
+    'account.status.preparing': 'Preparing',
+    'account.status.ready': 'Ready',
+    'account.status.completed': 'Completed',
 
     // Footer
     'footer.tagline': 'FRESH FUEL FOR YOUR GRIND.',
@@ -182,8 +197,21 @@ const translations: Record<string, Record<string, string>> = {
     'cart.delivery': 'Want delivery instead?',
     'cart.uberEats': 'Order on Uber Eats (delivery fee applies)',
     'cart.clear': 'Clear cart',
+    'cart.asap': 'ASAP (~15 min)',
+    'cart.schedule': 'Schedule',
+    'cart.selectDate': 'Select date...',
+    'cart.selectTime': 'Select time...',
+    'cart.selectPickupTime': 'Please select a pickup time',
+    'cart.closedDay': 'Closed on this day',
+    'cart.today': 'Today',
+    'cart.tomorrow': 'Tomorrow',
     'cart.nameRequired': 'Name required',
     'cart.phoneRequired': 'Phone required for pickup notification',
+
+    // 404
+    'notFound.title': 'PAGE NOT FOUND',
+    'notFound.sub': 'The page you\'re looking for doesn\'t exist or has been moved.',
+    'notFound.home': 'BACK TO HOME',
 
     // Order success
     'order.success': 'Order placed! We\'ll text you when your order is ready for pickup.',
@@ -285,6 +313,14 @@ const translations: Record<string, Record<string, string>> = {
 
     // Social
     'social.heading': 'CE QUE LE GYM DIT',
+    'social.review1.text': "Le meilleur smoothie post-entra\u00EEnement \u00E0 Montr\u00E9al. Le Peanut Power est malade \u2014 go\u00FBt de milkshake mais c'est sant\u00E9.",
+    'social.review1.author': 'ALEX T.',
+    'social.review2.text': "Je commande le Green Machine chaque matin avant mon workout. La commande QR \u00E0 mon casier, c'est g\u00E9nial.",
+    'social.review2.author': 'SARAH M.',
+    'social.review3.text': "Les shots d'immunit\u00E9 m'ont sauv\u00E9 pendant la saison de grippe. Vrai gingembre, vrai curcuma \u2014 on go\u00FBte la qualit\u00E9.",
+    'social.review3.author': 'JORDAN K.',
+    'social.review4.text': "Caf\u00E9 glac\u00E9 prot\u00E9in\u00E9 avant le leg day \u00E0 6h. Rien d'autre ne se compare. Cueillette rapide, jamais d'attente.",
+    'social.review4.author': 'MIKE D.',
     'social.follow': 'Suis-nous pour les sp\u00E9ciaux quotidiens et nouveaut\u00E9s',
     'social.instagram': '@SHAKEMTL SUR INSTAGRAM',
 
@@ -313,6 +349,7 @@ const translations: Record<string, Record<string, string>> = {
     'catering.success': 'DEMANDE RE\u00C7UE!',
     'catering.successSub': 'On vous revient dans les 24 heures.',
     'catering.select': 'Choisir...',
+    'catering.other': 'AUTRE',
     'catering.findUs': 'NOUS TROUVER',
 
     // Contact
@@ -348,6 +385,12 @@ const translations: Record<string, Record<string, string>> = {
     'account.perk2': 'Paiement plus rapide avec tes infos sauvegard\u00E9es',
     'account.perk3': 'Accumule et \u00E9change des points r\u00E9compenses',
     'account.perk4': 'Offres exclusives et acc\u00E8s anticip\u00E9',
+    'account.staffSignIn': 'CONNEXION PERSONNEL',
+    'account.pleaseWait': 'Veuillez patienter...',
+    'account.status.pending': 'En attente de paiement',
+    'account.status.preparing': 'En pr\u00E9paration',
+    'account.status.ready': 'Pr\u00EAt',
+    'account.status.completed': 'Compl\u00E9t\u00E9',
 
     // Footer
     'footer.tagline': 'DU CARBURANT FRAIS POUR TON GRIND.',
@@ -371,8 +414,21 @@ const translations: Record<string, Record<string, string>> = {
     'cart.delivery': 'Tu veux la livraison?',
     'cart.uberEats': 'Commander sur Uber Eats (frais de livraison)',
     'cart.clear': 'Vider le panier',
+    'cart.asap': 'D\u00E8s que possible (~15 min)',
+    'cart.schedule': 'Planifier',
+    'cart.selectDate': 'Choisir une date...',
+    'cart.selectTime': 'Choisir une heure...',
+    'cart.selectPickupTime': 'Veuillez choisir une heure de cueillette',
+    'cart.closedDay': 'Ferm\u00E9 cette journ\u00E9e',
+    'cart.today': "Aujourd'hui",
+    'cart.tomorrow': 'Demain',
     'cart.nameRequired': 'Nom requis',
     'cart.phoneRequired': 'T\u00E9l\u00E9phone requis pour notification de cueillette',
+
+    // 404
+    'notFound.title': 'PAGE INTROUVABLE',
+    'notFound.sub': "La page que tu cherches n'existe pas ou a \u00E9t\u00E9 d\u00E9plac\u00E9e.",
+    'notFound.home': "RETOUR \u00C0 L'ACCUEIL",
 
     // Order success
     'order.success': "Commande pass\u00E9e! On t'envoie un texto quand ta commande est pr\u00EAte.",
