@@ -41,6 +41,7 @@ export default function Loyalty() {
               </div>
             </div>
 
+            {/* Demo reward card — not connected to real user data */}
             <div className="loyalty-card">
               <div className="reward-card">
                 <div className="reward-card-inner">

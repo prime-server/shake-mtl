@@ -27,14 +27,14 @@ export default function Footer() {
         </div>
 
         <div className="footer-col footer-social">
-          <a href="https://instagram.com/shakemtl" target="_blank" rel="noopener">
+          <a href="https://instagram.com/shakemtl" target="_blank" rel="noopener noreferrer">
             @SHAKEMTL
           </a>
         </div>
       </div>
 
       <div className="footer-bottom">
-        <p>2026 &copy; SHAKE.</p>
+        <p>&copy; 2026 SHAKE.</p>
         <p>{t('footer.tagline')}</p>
       </div>
     </footer>

@@ -31,7 +31,7 @@ export default function HomePage() {
     fetchCatalog().then((data) => {
       const sellers = TOP_SELLER_NAMES
         .map((name) => data.items.find((i) => i.name.toLowerCase() === name.toLowerCase()))
-        .filter(Boolean) as MenuItem[];
+        .filter((item): item is MenuItem => item != null && Boolean(item.imageUrl));
       setTopSellers(sellers);
     });
   }, []);

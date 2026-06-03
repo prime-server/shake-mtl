@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom';
 import Ticker from '../components/Ticker';
-import About from '../components/About';
 import Footer from '../components/Footer';
 import { useReveal } from '../hooks/useReveal';
 import { useLang } from '../context/LangContext';
@@ -54,7 +53,6 @@ export default function AboutPage() {
         </div>
       </section>
 
-      <About />
       <Footer />
     </>
   );

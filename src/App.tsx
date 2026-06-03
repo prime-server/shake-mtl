@@ -34,14 +34,15 @@ function AppShell() {
 
   const { t } = useLang();
   const [orderSuccess, setOrderSuccess] = useState(false);
+  const clearCart = cart.clear;
   useEffect(() => {
     if (window.location.search.includes('order=success')) {
       setOrderSuccess(true);
-      cart.clear();
+      clearCart();
       window.history.replaceState({}, '', '/');
       setTimeout(() => setOrderSuccess(false), 8000);
     }
-  }, []);
+  }, [clearCart]);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 50);

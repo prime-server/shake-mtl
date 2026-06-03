@@ -65,6 +65,7 @@ export default function Cart({ items, subtotal, open, onClose, onUpdateQty, onRe
     setPickupTime('');
   }, [pickupDate]);
 
+  // QC tax: GST 5% + QST 9.975% = 14.975%
   const tax = subtotal * 0.14975;
   const total = subtotal + tax;
 
@@ -220,7 +221,7 @@ export default function Cart({ items, subtotal, open, onClose, onUpdateQty, onRe
 
             <div className="cart-delivery-alt">
               <p>{t('cart.delivery')}</p>
-              <a href="https://www.ubereats.com" target="_blank" rel="noopener" className="delivery-link">{t('cart.uberEats')}</a>
+              <a href="https://www.ubereats.com/ca/search?q=shake%20mtl" target="_blank" rel="noopener noreferrer" className="delivery-link">{t('cart.uberEats')}</a>
             </div>
 
             <button className="cart-clear" onClick={onClear}>{t('cart.clear')}</button>

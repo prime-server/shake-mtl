@@ -32,7 +32,7 @@ export default function Social() {
             <a
               href="https://instagram.com/shakemtl"
               target="_blank"
-              rel="noopener"
+              rel="noopener noreferrer"
               className="btn btn-ghost"
             >
               {t('social.instagram')}

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 
 export interface CartItem {
   id: string;
@@ -9,9 +9,24 @@ export interface CartItem {
   quantity: number;
 }
 
+const CART_STORAGE_KEY = 'shake_cart';
+
+function loadCart(): CartItem[] {
+  try {
+    const raw = localStorage.getItem(CART_STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch { /* ignore */ }
+  return [];
+}
+
 export function useCart() {
-  const [items, setItems] = useState<CartItem[]>([]);
+  const [items, setItems] = useState<CartItem[]>(loadCart);
   const [open, setOpen] = useState(false);
+
+  // Persist cart to localStorage on every change
+  useEffect(() => {
+    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
+  }, [items]);
 
   const add = useCallback((item: Omit<CartItem, 'quantity'>) => {
     setItems((prev) => {
@@ -40,7 +55,10 @@ export function useCart() {
     }
   }, []);
 
-  const clear = useCallback(() => setItems([]), []);
+  const clear = useCallback(() => {
+    setItems([]);
+    localStorage.removeItem(CART_STORAGE_KEY);
+  }, []);
 
   const count = items.reduce((s, i) => s + i.quantity, 0);
   const subtotal = items.reduce((s, i) => s + i.price * i.quantity, 0);

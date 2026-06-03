@@ -19,7 +19,7 @@ export interface CatalogData {
 }
 
 const CACHE_KEY = 'shake_catalog';
-const CACHE_TTL = 60 * 1000;
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 export async function fetchCatalog(): Promise<CatalogData> {
   // Check cache

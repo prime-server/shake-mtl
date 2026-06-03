@@ -24,7 +24,7 @@ export default function Contact() {
               <a
                 href="https://maps.google.com/?q=Golds+Gym+Ville+Saint+Laurent"
                 target="_blank"
-                rel="noopener"
+                rel="noopener noreferrer"
                 className="contact-link"
               >
                 {t('contact.directions')}
@@ -68,7 +68,7 @@ export default function Contact() {
               <div className="contact-icon">&#x1F4F1;</div>
               <h3>{t('contact.connect')}</h3>
               <p>
-                <a href="https://instagram.com/shakemtl" target="_blank" rel="noopener">
+                <a href="https://instagram.com/shakemtl" target="_blank" rel="noopener noreferrer">
                   @shakemtl
                 </a>
               </p>
