@@ -12,6 +12,7 @@
       { "source": "/api/order-complete", "function": "orderComplete" },
       { "source": "/api/daily-summary", "function": "dailySummary" },
       { "source": "/api/catalog-update", "function": "catalogUpdate" },
+      { "source": "/api/catalog-visibility", "function": "catalogVisibility" },
       { "source": "/api/sales-report", "function": "salesReport" },
       { "source": "**", "destination": "/index.html" }
     ]

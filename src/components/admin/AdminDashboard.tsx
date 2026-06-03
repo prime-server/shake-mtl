@@ -118,6 +118,12 @@ export default function AdminDashboard({ onNavigate }: Props) {
   const totalCollected = summary?.totalSales ?? 0;
   const totalTax = summary?.totalTax ?? 0;
   const netSales = totalCollected - totalTax;
+  // Square processing fees: 2.65% + $0.10 per transaction (card only)
+  const cardTx = transactions.filter((t) => t.tenderType === 'CARD').length;
+  const cardTotal = transactions.filter((t) => t.tenderType === 'CARD').reduce((s, t) => s + t.totalCents, 0);
+  const percentFee = Math.round(cardTotal * 0.0265);
+  const perTxFee = cardTx * 10; // 10 cents per transaction
+  const totalFees = percentFee + perTxFee;
 
   return (
     <div className="adm-dashboard">
@@ -154,6 +160,32 @@ export default function AdminDashboard({ onNavigate }: Props) {
           <span className="adm-stat-label">Net Sales</span>
         </div>
       </div>
+
+      {/* Processing fees */}
+      {!txLoading && cardTx > 0 && (
+        <div className="adm-fees-bar">
+          <div className="adm-fee-item">
+            <span className="adm-fee-label">Card Transactions</span>
+            <span className="adm-fee-val">{hidden ? '••' : cardTx}</span>
+          </div>
+          <div className="adm-fee-item">
+            <span className="adm-fee-label">Rate Fee (2.65%)</span>
+            <span className="adm-fee-val">{hidden ? '••••' : cents(percentFee)}</span>
+          </div>
+          <div className="adm-fee-item">
+            <span className="adm-fee-label">Per-Tx Fee ($0.10)</span>
+            <span className="adm-fee-val">{hidden ? '••••' : cents(perTxFee)}</span>
+          </div>
+          <div className="adm-fee-item adm-fee-total">
+            <span className="adm-fee-label">Total Fees</span>
+            <span className="adm-fee-val">{hidden ? '••••' : cents(totalFees)}</span>
+          </div>
+          <div className="adm-fee-item adm-fee-net">
+            <span className="adm-fee-label">Net After Fees</span>
+            <span className="adm-fee-val">{hidden ? '••••' : cents(netSales - totalFees)}</span>
+          </div>
+        </div>
+      )}
 
       {/* Quick actions */}
       <div className="adm-quick-actions">

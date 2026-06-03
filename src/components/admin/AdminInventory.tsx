@@ -10,6 +10,7 @@ interface CatalogItem {
   priceCents: number;
   imageUrl: string | null;
   categoryId: string | null;
+  hidden?: boolean;
 }
 
 interface Category {
@@ -36,8 +37,10 @@ export default function AdminInventory() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
 
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+
   useEffect(() => {
-    fetch('/api/catalog')
+    fetch('/api/catalog?admin=true')
       .then((r) => r.json())
       .then((data) => {
         setItems(data.items || []);
@@ -46,6 +49,23 @@ export default function AdminInventory() {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
+
+  const toggleVisibility = async (itemId: string, currentlyHidden: boolean) => {
+    setTogglingId(itemId);
+    try {
+      const token = await getToken();
+      const resp = await fetch('/api/catalog-visibility', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ itemId, hidden: !currentlyHidden }),
+      });
+      if (resp.ok) {
+        setItems((prev) => prev.map((it) => it.id === itemId ? { ...it, hidden: !currentlyHidden } : it));
+        localStorage.removeItem('shake_catalog');
+      }
+    } catch { /* ignore */ }
+    finally { setTogglingId(null); }
+  };
 
   const startEdit = (item: CatalogItem) => {
     setEditingId(item.id);
@@ -158,7 +178,7 @@ export default function AdminInventory() {
             const isEditing = editingId === item.id;
             const noImage = !item.imageUrl;
             return (
-              <div key={item.id} className={`adm-inv-row ${noImage ? 'no-image' : ''}`}>
+              <div key={item.id} className={`adm-inv-row ${noImage ? 'no-image' : ''} ${item.hidden ? 'is-hidden-item' : ''}`}>
                 {item.imageUrl ? (
                   <img src={item.imageUrl} alt={item.name} className="adm-inv-thumb" />
                 ) : (
@@ -209,7 +229,17 @@ export default function AdminInventory() {
                     <button className="adm-btn-cancel" onClick={cancelEdit}>Cancel</button>
                   </div>
                 ) : (
-                  <button className="adm-btn-edit" onClick={() => startEdit(item)}>Edit</button>
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    <button
+                      className={`adm-btn-vis ${item.hidden ? 'is-hidden' : ''}`}
+                      onClick={() => toggleVisibility(item.id, !!item.hidden)}
+                      disabled={togglingId === item.id}
+                      title={item.hidden ? 'Show on menu' : 'Hide from menu'}
+                    >
+                      {togglingId === item.id ? '...' : item.hidden ? '👁️‍🗨️ Show' : '🚫 Hide'}
+                    </button>
+                    <button className="adm-btn-edit" onClick={() => startEdit(item)}>Edit</button>
+                  </div>
                 )}
               </div>
             );

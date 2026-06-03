@@ -2789,6 +2789,42 @@ img { display: block; max-width: 100%; }
   color: var(--text-muted);
 }
 
+/* Processing fees bar */
+.adm-fees-bar {
+  display: flex;
+  gap: 0;
+  background: #F9F6F2;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 24px;
+  border: 1px solid rgba(0,0,0,0.04);
+}
+.adm-fee-item {
+  flex: 1;
+  padding: 14px 16px;
+  text-align: center;
+  border-right: 1px solid rgba(0,0,0,0.04);
+}
+.adm-fee-item:last-child { border-right: none; }
+.adm-fee-label {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.adm-fee-val {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+.adm-fee-total .adm-fee-val { color: #dc2626; }
+.adm-fee-net .adm-fee-val { color: #3d6b35; }
+
 .adm-quick-actions {
   display: flex;
   gap: 12px;
@@ -3359,6 +3395,24 @@ img { display: block; max-width: 100%; }
   border-color: var(--text-primary);
   color: var(--text-primary);
 }
+
+.adm-btn-vis {
+  padding: 6px 12px;
+  border: 1px solid var(--border-light);
+  border-radius: 1000px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.adm-btn-vis:hover { border-color: #dc2626; color: #dc2626; }
+.adm-btn-vis.is-hidden { border-color: #3d6b35; color: #3d6b35; }
+.adm-btn-vis.is-hidden:hover { background: #3d6b35; color: #fff; }
+
+.adm-inv-row.is-hidden-item { opacity: 0.45; }
 
 /* Inventory grid view */
 .adm-inv-grid {

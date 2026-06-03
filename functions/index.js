@@ -144,9 +144,11 @@ async function sq(path, opts = {}) {
 // ============================================================
 exports.catalog = onRequest({ cors: true, region: "us-east1", secrets: [squareToken] }, async (req, res) => {
   try {
-    // Return cached data if still fresh
+    const isAdmin = req.query.admin === "true";
+
+    // Return cached data if still fresh (only for public, admin always gets fresh hidden flags)
     const now = Date.now();
-    if (catalogCache && (now - catalogCacheTime) < CATALOG_CACHE_TTL) {
+    if (!isAdmin && catalogCache && (now - catalogCacheTime) < CATALOG_CACHE_TTL) {
       res.set("Cache-Control", "public, max-age=300, s-maxage=300");
       res.json(catalogCache);
       return;
@@ -178,7 +180,16 @@ exports.catalog = onRequest({ cors: true, region: "us-east1", secrets: [squareTo
       }))
       .sort((a, b) => a.ordinal - b.ordinal);
 
-    // Parse items — resolve images and categories
+    // Fetch hidden items list from Firestore
+    let hiddenIds = [];
+    try {
+      const hiddenSnap = await db.doc("settings/hiddenItems").get();
+      if (hiddenSnap.exists) {
+        hiddenIds = hiddenSnap.data().ids || [];
+      }
+    } catch { /* no hidden items doc — show everything */ }
+
+    // Parse items — resolve images and categories, filter hidden
     const items = allObjects
       .filter((o) => o.type === "ITEM" && !o.is_deleted)
       .map((item) => {
@@ -195,15 +206,19 @@ exports.catalog = onRequest({ cors: true, region: "us-east1", secrets: [squareTo
           priceCents: varData?.price_money?.amount || 0,
           categoryId: d.categories?.[0]?.id || d.category_id || null,
           imageUrl: imageId ? (images[imageId] || null) : null,
+          hidden: hiddenIds.includes(item.id),
         };
       });
 
-    // Update server-side cache
-    catalogCache = { categories, items };
+    // Public catalog excludes hidden items; admin gets all with hidden flag
+    const visibleItems = isAdmin ? items : items.filter((i) => !i.hidden);
+
+    // Update server-side cache (public version only)
+    catalogCache = { categories, items: visibleItems, allItems: items };
     catalogCacheTime = Date.now();
 
     res.set("Cache-Control", "public, max-age=300, s-maxage=300");
-    res.json(catalogCache);
+    res.json({ categories, items: isAdmin ? items : visibleItems });
   } catch (err) {
     console.error("Catalog error:", err);
     res.status(500).json({ error: "Failed to fetch catalog" });
@@ -721,5 +736,43 @@ exports.catalogUpdate = onRequest({ cors: true, region: "us-east1", secrets: [sq
   } catch (err) {
     console.error("Catalog update error:", err);
     res.status(500).json({ error: "Failed to update catalog item" });
+  }
+});
+
+// ============================================================
+// POST /api/catalog-visibility — toggle item visibility (auth required)
+// ============================================================
+exports.catalogVisibility = onRequest({ cors: true, region: "us-east1" }, async (req, res) => {
+  if (req.method !== "POST") { res.status(405).end(); return; }
+  const caller = await verifyStaff(req);
+  if (!caller) { res.status(403).json({ error: "Forbidden" }); return; }
+
+  try {
+    const { itemId, hidden } = req.body;
+    if (!itemId || typeof hidden !== "boolean") {
+      res.status(400).json({ error: "Missing itemId or hidden boolean" });
+      return;
+    }
+
+    const ref = db.doc("settings/hiddenItems");
+    const snap = await ref.get();
+    let ids = snap.exists ? (snap.data().ids || []) : [];
+
+    if (hidden && !ids.includes(itemId)) {
+      ids.push(itemId);
+    } else if (!hidden) {
+      ids = ids.filter((id) => id !== itemId);
+    }
+
+    await ref.set({ ids }, { merge: true });
+
+    // Invalidate catalog cache
+    catalogCache = null;
+    catalogCacheTime = 0;
+
+    res.json({ success: true, hiddenCount: ids.length });
+  } catch (err) {
+    console.error("Visibility toggle error:", err);
+    res.status(500).json({ error: "Failed to toggle visibility" });
   }
 });
