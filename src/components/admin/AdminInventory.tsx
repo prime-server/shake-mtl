@@ -132,10 +132,17 @@ export default function AdminInventory() {
     return cat?.name || '--';
   };
 
-  const filtered = items.filter((it) =>
-    it.name.toLowerCase().includes(search.toLowerCase()) ||
-    it.description.toLowerCase().includes(search.toLowerCase())
-  );
+  const [catFilter, setCatFilter] = useState<string>('all');
+
+  const filtered = items.filter((it) => {
+    const matchesSearch = !search ||
+      it.name.toLowerCase().includes(search.toLowerCase()) ||
+      it.description.toLowerCase().includes(search.toLowerCase());
+    const matchesCat = catFilter === 'all' || catFilter === 'uncategorized'
+      ? catFilter === 'all' || !it.categoryId
+      : it.categoryId === catFilter;
+    return matchesSearch && matchesCat;
+  });
 
   return (
     <div className="adm-inventory">
@@ -152,6 +159,19 @@ export default function AdminInventory() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
+        <select
+          className="adm-cat-filter"
+          value={catFilter}
+          onChange={(e) => setCatFilter(e.target.value)}
+        >
+          <option value="all">All Categories ({items.length})</option>
+          {categories.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name} ({items.filter((i) => i.categoryId === c.id).length})
+            </option>
+          ))}
+          <option value="uncategorized">Uncategorized ({items.filter((i) => !i.categoryId).length})</option>
+        </select>
         <div className="adm-view-toggle">
           <button
             className={viewMode === 'list' ? 'active' : ''}
