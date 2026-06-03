@@ -57,6 +57,7 @@ export default function AdminOrders() {
   const [loading, setLoading] = useState(true);
   const [txLoading, setTxLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -113,14 +114,23 @@ export default function AdminOrders() {
 
   const markReady = async (orderId: string) => {
     setActionLoading(orderId);
+    setActionError(null);
     try {
       const token = await getToken();
-      await fetch('/api/order-ready', {
+      const resp = await fetch('/api/order-ready', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ orderId }),
       });
+      if (!resp.ok) {
+        const data = await resp.json().catch(() => ({}));
+        throw new Error(data.error || `Failed (${resp.status})`);
+      }
       await fetchOrders();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to mark ready';
+      setActionError(msg);
+      setTimeout(() => setActionError(null), 5000);
     } finally {
       setActionLoading(null);
     }
@@ -128,14 +138,23 @@ export default function AdminOrders() {
 
   const markComplete = async (orderId: string) => {
     setActionLoading(orderId);
+    setActionError(null);
     try {
       const token = await getToken();
-      await fetch('/api/order-complete', {
+      const resp = await fetch('/api/order-complete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ orderId }),
       });
+      if (!resp.ok) {
+        const data = await resp.json().catch(() => ({}));
+        throw new Error(data.error || `Failed (${resp.status})`);
+      }
       await fetchOrders();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to mark complete';
+      setActionError(msg);
+      setTimeout(() => setActionError(null), 5000);
     } finally {
       setActionLoading(null);
     }
@@ -178,6 +197,20 @@ export default function AdminOrders() {
           </button>
         ))}
       </div>
+
+      {actionError && (
+        <div style={{
+          background: '#fef2f2',
+          border: '1px solid #fecaca',
+          color: '#dc2626',
+          padding: '10px 16px',
+          borderRadius: 8,
+          marginBottom: 16,
+          fontSize: 14,
+        }}>
+          {actionError}
+        </div>
+      )}
 
       {loading ? (
         <p className="adm-muted" style={{ padding: '40px 0', textAlign: 'center' }}>Loading orders...</p>

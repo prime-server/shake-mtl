@@ -108,7 +108,7 @@ img { display: block; max-width: 100%; }
    ======================================== */
 .ticker {
   overflow: hidden;
-  background: #141413;
+  background: #141413 !important;
   padding: 14px 0;
 }
 
@@ -124,7 +124,7 @@ img { display: block; max-width: 100%; }
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 2px;
-  color: #ffffff;
+  color: #ffffff !important;
   white-space: nowrap;
   padding-right: 24px;
 }

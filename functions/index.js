@@ -1,12 +1,55 @@
 const { onRequest } = require("firebase-functions/v2/https");
+const { defineSecret } = require("firebase-functions/params");
+const crypto = require("crypto");
 const admin = require("firebase-admin");
 
 admin.initializeApp();
 const db = admin.firestore();
 
-const SQUARE_TOKEN = "EAAAlz0n2RisRcJpBuAZqX6ct91xLY_V3D7O2wXznUji5GoaSI4EO3QIz0HiOmvM";
+const squareToken = defineSecret("SQUARE_TOKEN");
+const webhookSigKey = defineSecret("SQUARE_WEBHOOK_SIG_KEY");
+
 const SQUARE_BASE = "https://connect.squareup.com";
 const LOCATION_ID = "LEDCSA0Q805WD";
+
+// ============================================================
+// Rate limiter — in-memory, per Cloud Functions instance
+// ============================================================
+const rateLimitMap = new Map(); // ip -> { count, resetAt }
+function checkRateLimit(ip, maxPerMinute = 10) {
+  const now = Date.now();
+  const entry = rateLimitMap.get(ip);
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(ip, { count: 1, resetAt: now + 60000 });
+    return true;
+  }
+  entry.count++;
+  if (entry.count > maxPerMinute) return false;
+  return true;
+}
+
+// ============================================================
+// Webhook signature verification
+// ============================================================
+function verifySquareWebhook(signature, body, sigKey) {
+  if (!sigKey) return null; // no key configured — skip verification
+  const hmac = crypto.createHmac("sha256", sigKey);
+  hmac.update(typeof body === "string" ? body : JSON.stringify(body));
+  const hash = hmac.digest("base64");
+  return hash === signature;
+}
+
+// ============================================================
+// Dynamic ET offset helper
+// ============================================================
+function getETOffset() {
+  const now = new Date();
+  const etString = now.toLocaleString("en-US", { timeZone: "America/Toronto" });
+  const etDate = new Date(etString);
+  const offsetMs = now.getTime() - etDate.getTime();
+  const offsetHours = Math.round(offsetMs / 3600000);
+  return `${offsetHours >= 0 ? "-" : "+"}${String(Math.abs(offsetHours)).padStart(2, "0")}:00`;
+}
 
 // ============================================================
 // Auth helper — verify staff/admin role
@@ -77,7 +120,7 @@ async function sq(path, opts = {}) {
     ...opts,
     headers: {
       "Square-Version": "2024-01-18",
-      Authorization: `Bearer ${SQUARE_TOKEN}`,
+      Authorization: `Bearer ${squareToken.value()}`,
       "Content-Type": "application/json",
       ...(opts.headers || {}),
     },
@@ -88,7 +131,7 @@ async function sq(path, opts = {}) {
 // ============================================================
 // GET /api/catalog — pull full catalog with images from Square
 // ============================================================
-exports.catalog = onRequest({ cors: true, region: "us-east1" }, async (req, res) => {
+exports.catalog = onRequest({ cors: true, region: "us-east1", secrets: [squareToken] }, async (req, res) => {
   try {
     // Paginate to get ALL objects (Square returns max 100 per call)
     let allObjects = [];
@@ -147,11 +190,18 @@ exports.catalog = onRequest({ cors: true, region: "us-east1" }, async (req, res)
 // ============================================================
 // POST /api/checkout — create Square checkout link for pickup
 // ============================================================
-exports.checkout = onRequest({ cors: true, region: "us-east1" }, async (req, res) => {
+exports.checkout = onRequest({ cors: true, region: "us-east1", secrets: [squareToken] }, async (req, res) => {
   if (req.method !== "POST") { res.status(405).end(); return; }
 
+  // Rate limit: max 10 checkouts per IP per minute
+  const clientIp = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.ip || "unknown";
+  if (!checkRateLimit(clientIp, 10)) {
+    res.status(429).json({ error: "Too many requests. Please try again shortly." });
+    return;
+  }
+
   try {
-    const { items, customerName, customerPhone, customerEmail, pickupNote } = req.body;
+    const { items, customerName, customerPhone, customerEmail, pickupNote, pickupType, pickupDate, pickupTime } = req.body;
     if (!items?.length) { res.status(400).json({ error: "Cart empty" }); return; }
 
     const lineItems = items.map((i) => ({
@@ -160,6 +210,25 @@ exports.checkout = onRequest({ cors: true, region: "us-east1" }, async (req, res
     }));
 
     const idempotencyKey = `co-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+    // Build pickup details — ASAP or SCHEDULED
+    const pickupDetails = {
+      recipient: {
+        display_name: customerName || "Guest",
+        phone_number: customerPhone || "",
+      },
+      note: pickupNote || "",
+      schedule_type: "ASAP",
+      prep_time_duration: "P0DT0H15M0S",
+    };
+
+    if (pickupType === "scheduled" && pickupDate && pickupTime) {
+      pickupDetails.schedule_type = "SCHEDULED";
+      // pickupDate = "YYYY-MM-DD", pickupTime = "HH:MM"
+      const etOffset = getETOffset();
+      pickupDetails.pickup_at = `${pickupDate}T${pickupTime}:00${etOffset}`;
+      delete pickupDetails.prep_time_duration;
+    }
 
     const checkoutResp = await sq("/v2/online-checkout/payment-links", {
       method: "POST",
@@ -171,15 +240,7 @@ exports.checkout = onRequest({ cors: true, region: "us-east1" }, async (req, res
           fulfillments: [{
             type: "PICKUP",
             state: "PROPOSED",
-            pickup_details: {
-              recipient: {
-                display_name: customerName || "Guest",
-                phone_number: customerPhone || "",
-              },
-              note: pickupNote || "",
-              schedule_type: "ASAP",
-              prep_time_duration: "P0DT0H15M0S",
-            },
+            pickup_details: pickupDetails,
           }],
         },
         checkout_options: {
@@ -203,6 +264,9 @@ exports.checkout = onRequest({ cors: true, region: "us-east1" }, async (req, res
         customerPhone: customerPhone || "",
         customerEmail: customerEmail || "",
         pickupNote: pickupNote || "",
+        pickupType: pickupType || "asap",
+        pickupDate: pickupDate || null,
+        pickupTime: pickupTime || null,
         items: items,
         status: "pending_payment",
         squarePaymentLinkId: linkId,
@@ -224,10 +288,24 @@ exports.checkout = onRequest({ cors: true, region: "us-east1" }, async (req, res
 // ============================================================
 // POST /api/webhook — Square webhook for order updates
 // ============================================================
-exports.webhook = onRequest({ cors: false, region: "us-east1" }, async (req, res) => {
+exports.webhook = onRequest({ cors: false, region: "us-east1", secrets: [squareToken, webhookSigKey] }, async (req, res) => {
   if (req.method !== "POST") { res.status(405).end(); return; }
 
   try {
+    // Verify Square webhook signature if key is configured
+    const sigKey = webhookSigKey.value();
+    const signature = req.headers["x-square-hmacsha256-signature"];
+    if (sigKey && sigKey !== "placeholder" && sigKey.length > 10) {
+      const valid = verifySquareWebhook(signature, req.body, sigKey);
+      if (!valid) {
+        console.warn("Webhook signature verification failed");
+        res.status(403).send("Invalid signature");
+        return;
+      }
+    } else {
+      console.warn("SQUARE_WEBHOOK_SIG_KEY not set — skipping signature verification");
+    }
+
     const event = req.body;
     const type = event.type;
 
@@ -271,7 +349,7 @@ exports.webhook = onRequest({ cors: false, region: "us-east1" }, async (req, res
 // ============================================================
 // GET /api/orders — list orders for admin dashboard (auth required)
 // ============================================================
-exports.orders = onRequest({ cors: true, region: "us-east1" }, async (req, res) => {
+exports.orders = onRequest({ cors: true, region: "us-east1", secrets: [squareToken] }, async (req, res) => {
   const caller = await verifyStaff(req);
   if (!caller) { res.status(403).json({ error: "Forbidden" }); return; }
 
@@ -305,7 +383,7 @@ exports.orders = onRequest({ cors: true, region: "us-east1" }, async (req, res) 
 // ============================================================
 // POST /api/order-ready — mark order ready + send SMS (auth required)
 // ============================================================
-exports.orderReady = onRequest({ cors: true, region: "us-east1" }, async (req, res) => {
+exports.orderReady = onRequest({ cors: true, region: "us-east1", secrets: [squareToken] }, async (req, res) => {
   if (req.method !== "POST") { res.status(405).end(); return; }
   const caller = await verifyStaff(req);
   if (!caller) { res.status(403).json({ error: "Forbidden" }); return; }
@@ -351,7 +429,7 @@ exports.orderReady = onRequest({ cors: true, region: "us-east1" }, async (req, r
 // ============================================================
 // POST /api/order-complete — mark order as picked up (auth required)
 // ============================================================
-exports.orderComplete = onRequest({ cors: true, region: "us-east1" }, async (req, res) => {
+exports.orderComplete = onRequest({ cors: true, region: "us-east1", secrets: [squareToken] }, async (req, res) => {
   if (req.method !== "POST") { res.status(405).end(); return; }
   const caller = await verifyStaff(req);
   if (!caller) { res.status(403).json({ error: "Forbidden" }); return; }
@@ -360,7 +438,11 @@ exports.orderComplete = onRequest({ cors: true, region: "us-east1" }, async (req
     const { orderId } = req.body;
     if (!orderId) { res.status(400).json({ error: "Missing orderId" }); return; }
 
-    await db.collection("orders").doc(orderId).update({
+    const orderRef = db.collection("orders").doc(orderId);
+    const snap = await orderRef.get();
+    if (!snap.exists) { res.status(404).json({ error: "Order not found" }); return; }
+
+    await orderRef.update({
       status: "completed",
       completedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
@@ -418,7 +500,7 @@ function parseSquareOrder(o) {
 // ============================================================
 // GET /api/daily-summary — today's stats from Square (auth required)
 // ============================================================
-exports.dailySummary = onRequest({ cors: true, region: "us-east1" }, async (req, res) => {
+exports.dailySummary = onRequest({ cors: true, region: "us-east1", secrets: [squareToken] }, async (req, res) => {
   const caller = await verifyStaff(req);
   if (!caller) { res.status(403).json({ error: "Forbidden" }); return; }
 
@@ -427,7 +509,8 @@ exports.dailySummary = onRequest({ cors: true, region: "us-east1" }, async (req,
       timeZone: "America/Toronto",
       year: "numeric", month: "2-digit", day: "2-digit",
     }).format(new Date());
-    const startAt = `${etNow}T00:00:00-04:00`;
+    const offsetStr = getETOffset();
+    const startAt = `${etNow}T00:00:00${offsetStr}`;
 
     const orders = await searchSquareOrders(startAt);
     const completed = orders.filter((o) => o.state === "COMPLETED");
@@ -454,7 +537,7 @@ exports.dailySummary = onRequest({ cors: true, region: "us-east1" }, async (req,
 // ============================================================
 // POST /api/sales-report — sales data from Square (auth required)
 // ============================================================
-exports.salesReport = onRequest({ cors: true, region: "us-east1" }, async (req, res) => {
+exports.salesReport = onRequest({ cors: true, region: "us-east1", secrets: [squareToken] }, async (req, res) => {
   if (req.method !== "POST") { res.status(405).end(); return; }
   const caller = await verifyStaff(req);
   if (!caller) { res.status(403).json({ error: "Forbidden" }); return; }
@@ -470,11 +553,14 @@ exports.salesReport = onRequest({ cors: true, region: "us-east1" }, async (req, 
     let totalSales = 0;
     completed.forEach((o) => { totalSales += o.totalCents; });
 
+    // Return all orders in table but totals only reflect completed orders
     res.json({
       orders: parsed,
       totalSales,
       orderCount: completed.length,
+      totalOrderCount: parsed.length,
       avgOrder: completed.length > 0 ? Math.round(totalSales / completed.length) : 0,
+      note: "totalSales/orderCount/avgOrder reflect COMPLETED orders only",
     });
   } catch (err) {
     console.error("Sales report error:", err);
@@ -485,7 +571,7 @@ exports.salesReport = onRequest({ cors: true, region: "us-east1" }, async (req, 
 // ============================================================
 // POST /api/catalog-update — update a catalog item via Square (auth required)
 // ============================================================
-exports.catalogUpdate = onRequest({ cors: true, region: "us-east1" }, async (req, res) => {
+exports.catalogUpdate = onRequest({ cors: true, region: "us-east1", secrets: [squareToken] }, async (req, res) => {
   if (req.method !== "POST") { res.status(405).end(); return; }
   const caller = await verifyStaff(req);
   if (!caller) { res.status(403).json({ error: "Forbidden" }); return; }

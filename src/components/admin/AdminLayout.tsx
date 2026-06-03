@@ -17,8 +17,10 @@ const NAV_ITEMS: { key: Section; label: string; icon: string }[] = [
   { key: 'terminal', label: 'Terminal', icon: '\u25FB' },
 ];
 
+const ADMIN_EMAILS = ['shakemtl@gmail.com'];
+
 export default function AdminLayout() {
-  const { user, loading: authLoading, signOut } = useAuth();
+  const { user, role, loading: authLoading, signOut } = useAuth();
   const [section, setSection] = useState<Section>('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -42,8 +44,26 @@ export default function AdminLayout() {
     );
   }
 
-  // Any authenticated user can see the admin UI.
-  // Backend APIs still verify staff/admin role via token — no data leaks.
+  // Auth gate: must be staff/admin role OR in ADMIN_EMAILS
+  const isAdminEmail = user.email ? ADMIN_EMAILS.includes(user.email.toLowerCase()) : false;
+  if (role !== 'staff' && role !== 'admin' && !isAdminEmail) {
+    return (
+      <div className="admin">
+        <div className="admin-header">
+          <h1>SHAKE<span className="dot">.</span> Staff</h1>
+        </div>
+        <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+          <h2 style={{ color: '#dc2626', marginBottom: 12 }}>Access Denied</h2>
+          <p style={{ color: '#9ca3af', marginBottom: 24 }}>
+            You do not have permission to access the admin panel.
+          </p>
+          <button className="btn btn-primary" onClick={signOut} style={{ padding: '10px 24px' }}>
+            Sign Out
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const navigate = (s: Section) => {
     setSection(s);
