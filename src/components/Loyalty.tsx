@@ -1,7 +1,9 @@
 import { useReveal } from '../hooks/useReveal';
+import { useLang } from '../context/LangContext';
 
 export default function Loyalty() {
   const { ref, visible } = useReveal();
+  const { t } = useLang();
 
   return (
     <section id="loyalty" className="alt-bg">
@@ -9,37 +11,31 @@ export default function Loyalty() {
         <div className={`reveal ${visible ? 'visible' : ''}`}>
           <div className="loyalty-grid">
             <div className="loyalty-info">
-              <span className="section-tag">Rewards</span>
-              <h2>
-                Earn points.<br />
-                <span className="accent">Sip free.</span>
-              </h2>
+              <h2 style={{ whiteSpace: 'pre-line' }}>{t('loyalty.heading')}</h2>
               <p className="section-sub">
-                Join SHAKE. Rewards with just your phone number. Earn points on
-                every purchase — in-store, online, or through QR ordering at the
-                gym.
+                {t('loyalty.sub')}
               </p>
 
               <div className="loyalty-perks">
                 <div className="perk">
                   <div className="perk-icon">1</div>
                   <div>
-                    <strong>Earn</strong>
-                    <p>1 point for every $1 spent</p>
+                    <strong>{t('loyalty.earn')}</strong>
+                    <p>{t('loyalty.earnDesc')}</p>
                   </div>
                 </div>
                 <div className="perk">
                   <div className="perk-icon">2</div>
                   <div>
-                    <strong>Redeem</strong>
-                    <p>100 points = $5 off or 10 visits = free smoothie</p>
+                    <strong>{t('loyalty.redeem')}</strong>
+                    <p>{t('loyalty.redeemDesc')}</p>
                   </div>
                 </div>
                 <div className="perk">
                   <div className="perk-icon">3</div>
                   <div>
-                    <strong>Repeat</strong>
-                    <p>Points stack from POS, online & QR orders</p>
+                    <strong>{t('loyalty.repeat')}</strong>
+                    <p>{t('loyalty.repeatDesc')}</p>
                   </div>
                 </div>
               </div>
@@ -47,22 +43,21 @@ export default function Loyalty() {
 
             <div className="loyalty-card">
               <div className="reward-card">
-                <div className="reward-card-glow" />
                 <div className="reward-card-inner">
                   <div className="reward-card-top">
                     <span className="reward-logo">SHAKE<span className="dot">.</span></span>
-                    <span className="reward-tier">REWARDS</span>
+                    <span className="reward-tier">{t('loyalty.title')}</span>
                   </div>
                   <div className="reward-card-mid">
                     <div className="reward-progress">
                       <div className="reward-bar">
                         <div className="reward-fill" style={{ width: '65%' }} />
                       </div>
-                      <span className="reward-pts">65 / 100 pts</span>
+                      <span className="reward-pts">65 / 100 PTS</span>
                     </div>
                   </div>
                   <div className="reward-card-bot">
-                    <span>Next reward: Free Smoothie</span>
+                    <span>{t('loyalty.nextReward')}</span>
                     <span className="reward-phone">514-***-**21</span>
                   </div>
                 </div>

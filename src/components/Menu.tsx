@@ -1,30 +1,85 @@
 import { useState, useEffect } from 'react';
 import { fetchCatalog, type MenuItem, type CategoryItem } from '../data/menu';
 import { useReveal } from '../hooks/useReveal';
+import { useLang } from '../context/LangContext';
+import type { CartItem } from '../hooks/useCart';
 
-export default function Menu() {
+interface MenuProps {
+  onAddToCart: (item: Omit<CartItem, 'quantity'>) => void;
+}
+
+// Categories to show in the menu (ordered), hide internal ones
+const VISIBLE_CATEGORIES = [
+  'Smoothie & Bowls',
+  'Post Workout Smoothie',
+  'Coffee & Matcha',
+  'Snacks',
+  'Energy Drinks',
+  'Supplements',
+  'Merch',
+];
+
+// Items to hide (internal/operational)
+const HIDDEN_ITEMS = [
+  'DELIVERY FEE', 'DELIVERY', 'Service Fee',
+  'Extra Vanilla pump', 'Milk extra', 'Protein scoop',
+  'Espresso Shot', 'Creatine Scoop', 'Collagene Scoop',
+  'PVL Creatine scoop', 'Peanut Butter',
+];
+
+export default function Menu({ onAddToCart }: MenuProps) {
   const [categories, setCategories] = useState<CategoryItem[]>([]);
   const [items, setItems] = useState<MenuItem[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [showAll, setShowAll] = useState(false);
   const [animKey, setAnimKey] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [addedId, setAddedId] = useState<string | null>(null);
   const { ref, visible } = useReveal();
+  const { t } = useLang();
 
   useEffect(() => {
     fetchCatalog().then((data) => {
-      setCategories(data.categories);
-      setItems(data.items);
-      if (data.categories.length > 0) setActiveId(data.categories[0].id);
+      // Filter and order categories
+      const ordered = VISIBLE_CATEGORIES
+        .map((name) => data.categories.find((c) => c.name === name))
+        .filter(Boolean) as CategoryItem[];
+
+      // Filter out hidden/internal items
+      const clean = data.items.filter(
+        (i) => !HIDDEN_ITEMS.some((h) => i.name.toLowerCase() === h.toLowerCase())
+      );
+
+      setCategories(ordered);
+      setItems(clean);
+      if (ordered.length > 0) setActiveId(ordered[0].id);
       setLoading(false);
     });
   }, []);
 
-  const filtered = activeId ? items.filter((i) => i.categoryId === activeId) : items;
+  const filtered = showAll
+    ? items
+    : activeId
+      ? items.filter((i) => i.categoryId === activeId)
+      : items;
 
-  const switchTab = (id: string) => {
-    if (id === activeId) return;
+  const switchTab = (id: string | null) => {
+    if (id === activeId && !showAll) return;
+    setShowAll(id === null);
     setActiveId(id);
     setAnimKey((k) => k + 1);
+  };
+
+  const handleAdd = (item: MenuItem) => {
+    onAddToCart({
+      id: item.id,
+      variationId: item.variationId || item.id,
+      name: item.name,
+      price: item.price,
+      imageUrl: item.imageUrl,
+    });
+    setAddedId(item.id);
+    setTimeout(() => setAddedId(null), 1200);
   };
 
   return (
@@ -32,75 +87,95 @@ export default function Menu() {
       <div className="section-inner" ref={ref}>
         <div className={`reveal ${visible ? 'visible' : ''}`}>
           <div className="section-header">
-            <span className="section-tag">Menu</span>
-            <h2>
-              What's <span className="accent">blending.</span>
-            </h2>
+            <h2>{t('menu.heading')}</h2>
             <p className="section-sub">
-              Every drink made fresh to order. Add protein, creatine, collagen, or
-              swap your milk — your call.
+              {t('menu.headingSub')}
             </p>
           </div>
 
           {loading ? (
-            <div className="menu-loading">Loading menu from Square...</div>
+            <div className="menu-loading">{t('menu.loading')}</div>
           ) : (
             <>
-              {categories.length > 0 && (
-                <div className="menu-tabs">
-                  {categories.map((c) => (
-                    <button
-                      key={c.id}
-                      className={`menu-tab ${activeId === c.id ? 'active' : ''}`}
-                      onClick={() => switchTab(c.id)}
-                    >
-                      {c.name}
-                    </button>
-                  ))}
+              <div className="modifiers-bar">
+                <span className="modifiers-label">{t('menu.customize')}</span>
+                <div className="modifiers-pills">
+                  <span className="mod-pill">&#x1F95B; {t('mod.almondMilk')} <em>+$1</em></span>
+                  <span className="mod-pill">&#x1F95B; {t('mod.oatMilk')} <em>+$1</em></span>
+                  <span className="mod-pill">&#x1F965; {t('mod.coconutMilk')} <em>+$1</em></span>
+                  <span className="mod-pill">&#x1F4AA; {t('mod.wheyProtein')} <em>+$2</em></span>
+                  <span className="mod-pill">&#x1F331; {t('mod.plantProtein')} <em>+$2</em></span>
+                  <span className="mod-pill">&#x26A1; {t('mod.creatine')} <em>+$2</em></span>
+                  <span className="mod-pill">&#x2728; {t('mod.collagen')} <em>+$2</em></span>
+                  <span className="mod-pill">&#x1F353; {t('mod.extraFruit')} <em>+$1.50</em></span>
+                  <span className="mod-pill">&#x1F95C; {t('mod.peanutButter')} <em>+$1</em></span>
+                  <span className="mod-pill">&#x1FAD8; {t('mod.chiaSeeds')} <em>+$1</em></span>
+                  <span className="mod-pill">&#x1F96C; {t('mod.spinach')} <em>+$1</em></span>
+                  <span className="mod-pill">&#x1F4CF; {t('mod.sizeUp')} <em>+$2</em></span>
                 </div>
-              )}
+              </div>
+
+              <div className="menu-tabs">
+                {categories.map((c) => (
+                  <button
+                    key={c.id}
+                    className={`menu-tab ${activeId === c.id && !showAll ? 'active' : ''}`}
+                    onClick={() => switchTab(c.id)}
+                  >
+                    {c.name}
+                  </button>
+                ))}
+                <button
+                  className={`menu-tab ${showAll ? 'active' : ''}`}
+                  onClick={() => switchTab(null)}
+                >
+                  {t('menu.all')}
+                </button>
+              </div>
 
               <div className="menu-grid" key={animKey}>
                 {filtered.map((item, i) => (
                   <div
                     key={item.id}
                     className="menu-card"
-                    style={{ animationDelay: `${i * 60}ms` }}
+                    style={{ animationDelay: `${i * 40}ms` }}
                   >
-                    {item.imageUrl && (
-                      <div className="card-img">
+                    <div className="card-img">
+                      {item.imageUrl ? (
                         <img src={item.imageUrl} alt={item.name} loading="lazy" />
-                      </div>
-                    )}
+                      ) : (
+                        <div className="card-img-placeholder">
+                          <span>SHAKE.</span>
+                        </div>
+                      )}
+                    </div>
 
                     <div className="card-body">
                       <div className="card-top">
                         <div className="card-info">
                           <h3>{item.name}</h3>
-                          <p>{item.description}</p>
+                          {item.description && <p>{item.description}</p>}
                         </div>
                         <span className="card-price">${item.price.toFixed(2)}</span>
                       </div>
+
+                      <button
+                        className={`add-to-cart-btn ${addedId === item.id ? 'added' : ''}`}
+                        onClick={() => handleAdd(item)}
+                      >
+                        {addedId === item.id ? t('menu.added') : t('menu.addToOrder')}
+                      </button>
                     </div>
                   </div>
                 ))}
               </div>
 
               {filtered.length === 0 && !loading && (
-                <p className="menu-empty">No items in this category yet.</p>
+                <p className="menu-empty">{t('menu.empty')}</p>
               )}
             </>
           )}
 
-          <div className="menu-footer-box">
-            <div className="menu-footer-accent" />
-            <p>
-              <strong>Modifiers:</strong> Almond milk, oat milk, coconut milk (+$1)
-              &nbsp;·&nbsp; Whey or plant protein (+$2) &nbsp;·&nbsp; Creatine,
-              collagen (+$2) &nbsp;·&nbsp; Extra fruit, PB, chia, spinach, flax
-              (+$1–$1.50) &nbsp;·&nbsp; Size up to 24oz (+$2)
-            </p>
-          </div>
         </div>
       </div>
     </section>

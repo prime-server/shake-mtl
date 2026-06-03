@@ -3,18 +3,23 @@
     "public": "dist",
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "rewrites": [
-      {
-        "source": "/api/catalog",
-        "function": "catalog"
-      },
-      {
-        "source": "**",
-        "destination": "/index.html"
-      }
+      { "source": "/api/catalog", "function": "catalog" },
+      { "source": "/api/checkout", "function": "checkout" },
+      { "source": "/api/webhook", "function": "webhook" },
+      { "source": "/api/orders", "function": "orders" },
+      { "source": "/api/order-ready", "function": "orderReady" },
+      { "source": "/api/order-complete", "function": "orderComplete" },
+      { "source": "/api/daily-summary", "function": "dailySummary" },
+      { "source": "/api/catalog-update", "function": "catalogUpdate" },
+      { "source": "/api/sales-report", "function": "salesReport" },
+      { "source": "**", "destination": "/index.html" }
     ]
   },
   "functions": {
     "source": "functions",
     "runtime": "nodejs20"
+  },
+  "firestore": {
+    "rules": "firestore.rules"
   }
 }

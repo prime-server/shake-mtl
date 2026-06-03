@@ -1,26 +1,25 @@
 import { useReveal } from '../hooks/useReveal';
 import { useGymHours, getTodayHours } from '../hooks/useGymHours';
+import { useLang } from '../context/LangContext';
 
 export default function Contact() {
   const { ref, visible } = useReveal();
   const { weekdayDescriptions, openNow, address, loading } = useGymHours();
   const todayHours = getTodayHours(weekdayDescriptions);
+  const { t } = useLang();
 
   return (
     <section id="contact" className="alt-bg">
       <div className="section-inner" ref={ref}>
         <div className={`reveal ${visible ? 'visible' : ''}`}>
           <div className="section-header">
-            <span className="section-tag">Location</span>
-            <h2>
-              Find <span className="accent">us.</span>
-            </h2>
+            <h2>{t('contact.heading')}</h2>
           </div>
 
           <div className="contact-grid">
             <div className="contact-card">
-              <div className="contact-icon">📍</div>
-              <h3>Gold's Gym VSL</h3>
+              <div className="contact-icon">&#x1F4CD;</div>
+              <h3>{t('contact.gym')}</h3>
               <p style={{ whiteSpace: 'pre-line' }}>{address}</p>
               <a
                 href="https://maps.google.com/?q=Golds+Gym+Ville+Saint+Laurent"
@@ -28,23 +27,23 @@ export default function Contact() {
                 rel="noopener"
                 className="contact-link"
               >
-                Get Directions →
+                {t('contact.directions')}
               </a>
             </div>
 
             <div className="contact-card">
-              <div className="contact-icon">🕐</div>
+              <div className="contact-icon">&#x1F550;</div>
               <h3>
-                Hours
+                {t('contact.hours')}
                 {!loading && (
                   <span className={`open-badge ${openNow ? 'is-open' : 'is-closed'}`}>
-                    {openNow ? 'Open Now' : 'Closed'}
+                    {openNow ? t('contact.openNow') : t('contact.closed')}
                   </span>
                 )}
               </h3>
               {todayHours && (
                 <p className="today-hours">
-                  <strong>Today:</strong> {todayHours}
+                  <strong>{t('contact.today')}</strong> {todayHours}
                 </p>
               )}
               <div className="hours-list">
@@ -66,33 +65,30 @@ export default function Contact() {
             </div>
 
             <div className="contact-card">
-              <div className="contact-icon">📱</div>
-              <h3>Connect</h3>
+              <div className="contact-icon">&#x1F4F1;</div>
+              <h3>{t('contact.connect')}</h3>
               <p>
                 <a href="https://instagram.com/shakemtl" target="_blank" rel="noopener">
                   @shakemtl
                 </a>
               </p>
-              <p className="contact-sub">DM us for questions or custom orders</p>
+              <p className="contact-sub">{t('contact.dmUs')}</p>
             </div>
 
             <div className="contact-card">
-              <div className="contact-icon">🛍️</div>
-              <h3>Pickup</h3>
-              <p>
-                Scan a QR code anywhere in the gym.<br />
-                Ready in 10–15 min.
+              <div className="contact-icon">&#x1F6CD;&#xFE0F;</div>
+              <h3>{t('contact.pickup')}</h3>
+              <p style={{ whiteSpace: 'pre-line' }}>
+                {t('contact.pickupDesc')}
               </p>
             </div>
           </div>
 
           <div className="qr-banner">
-            <div className="qr-banner-glow" />
             <div className="qr-banner-content">
-              <h3>Skip the line. Scan. Order. Pick up at SHAKE.</h3>
+              <h3>{t('contact.qrHeading')}</h3>
               <p>
-                QR codes at the front desk, smoothie bar, locker room, cardio
-                area, and supplement wall.
+                {t('contact.qrSub')}
               </p>
             </div>
           </div>
