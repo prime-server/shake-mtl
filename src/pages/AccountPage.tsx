@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, query, where, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, orderBy, limit, onSnapshot, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { useLang } from '../context/LangContext';
@@ -33,6 +33,42 @@ export default function AccountPage() {
   const { t } = useLang();
   const [orders, setOrders] = useState<OrderDoc[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
+  const [displayName, setDisplayName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileSaved, setProfileSaved] = useState(false);
+
+  // Load profile from Firestore
+  useEffect(() => {
+    if (!user?.uid) return;
+    (async () => {
+      try {
+        const snap = await getDoc(doc(db, 'users', user.uid));
+        if (snap.exists()) {
+          const data = snap.data();
+          setDisplayName(data.displayName || '');
+          setPhone(data.phone || '');
+        }
+      } catch {
+        /* ignore */
+      }
+    })();
+  }, [user?.uid]);
+
+  const saveProfile = async () => {
+    if (!user?.uid) return;
+    setProfileLoading(true);
+    setProfileSaved(false);
+    try {
+      await updateDoc(doc(db, 'users', user.uid), { displayName, phone });
+      setProfileSaved(true);
+      setTimeout(() => setProfileSaved(false), 3000);
+    } catch {
+      /* ignore */
+    } finally {
+      setProfileLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!user?.email) return;
@@ -115,6 +151,40 @@ export default function AccountPage() {
         <div className="account-header">
           <span className="account-email">{user.email}</span>
           <button className="account-signout" onClick={signOut}>{t('account.signOut')}</button>
+        </div>
+
+        {/* Profile Section */}
+        <div className="account-profile">
+          <h3>PROFILE</h3>
+          <div className="account-profile-form">
+            <div className="form-group">
+              <label>NAME</label>
+              <input
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                placeholder="Your name"
+              />
+            </div>
+            <div className="form-group">
+              <label>PHONE</label>
+              <input
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="514-xxx-xxxx"
+              />
+            </div>
+            <div className="form-group">
+              <label>EMAIL</label>
+              <input value={user.email || ''} disabled />
+            </div>
+            <button
+              className="btn btn-primary"
+              onClick={saveProfile}
+              disabled={profileLoading}
+            >
+              {profileLoading ? 'SAVING...' : profileSaved ? 'SAVED!' : 'SAVE'}
+            </button>
+          </div>
         </div>
 
         <h2 style={{

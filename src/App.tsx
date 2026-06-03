@@ -1,22 +1,23 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import Banner from './components/Banner';
 import Navbar from './components/Navbar';
 import Cart from './components/Cart';
-import Admin from './components/Admin';
 import { useCart } from './hooks/useCart';
 import { AuthProvider } from './context/AuthContext';
 import { LangProvider } from './context/LangContext';
 import { useLang } from './context/LangContext';
+import { fetchCatalog } from './data/menu';
 
-import HomePage from './pages/HomePage';
-import MenuPage from './pages/MenuPage';
-import AboutPage from './pages/AboutPage';
-import LoyaltyPage from './pages/LoyaltyPage';
-import CateringPage from './pages/CateringPage';
-import ContactPage from './pages/ContactPage';
-import AccountPage from './pages/AccountPage';
-import NotFoundPage from './pages/NotFoundPage';
+const HomePage = lazy(() => import('./pages/HomePage'));
+const MenuPage = lazy(() => import('./pages/MenuPage'));
+const AboutPage = lazy(() => import('./pages/AboutPage'));
+const LoyaltyPage = lazy(() => import('./pages/LoyaltyPage'));
+const CateringPage = lazy(() => import('./pages/CateringPage'));
+const ContactPage = lazy(() => import('./pages/ContactPage'));
+const AccountPage = lazy(() => import('./pages/AccountPage'));
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
+const Admin = lazy(() => import('./components/Admin'));
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -44,13 +45,18 @@ function AppShell() {
     }
   }, [clearCart]);
 
+  // Prefetch catalog on app mount so /menu loads instantly
+  useEffect(() => {
+    fetchCatalog();
+  }, []);
+
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 50);
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  if (isAdmin) return <Admin />;
+  if (isAdmin) return <Suspense fallback={<div style={{ minHeight: '100vh' }} />}><Admin /></Suspense>;
 
   return (
     <>
@@ -66,16 +72,18 @@ function AppShell() {
       <ScrollToTop />
 
       <main>
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/menu" element={<MenuPage onAddToCart={cart.add} />} />
-          <Route path="/about" element={<AboutPage />} />
-          <Route path="/loyalty" element={<LoyaltyPage />} />
-          <Route path="/catering" element={<CateringPage />} />
-          <Route path="/contact" element={<ContactPage />} />
-          <Route path="/account" element={<AccountPage />} />
-          <Route path="*" element={<NotFoundPage />} />
-        </Routes>
+        <Suspense fallback={<div style={{ minHeight: '100vh' }} />}>
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/menu" element={<MenuPage onAddToCart={cart.add} />} />
+            <Route path="/about" element={<AboutPage />} />
+            <Route path="/loyalty" element={<LoyaltyPage />} />
+            <Route path="/catering" element={<CateringPage />} />
+            <Route path="/contact" element={<ContactPage />} />
+            <Route path="/account" element={<AccountPage />} />
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
+        </Suspense>
       </main>
 
       <Cart

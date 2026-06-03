@@ -26,9 +26,11 @@ export default function HomePage() {
   const cta = useReveal();
   const { t } = useLang();
   const [topSellers, setTopSellers] = useState<MenuItem[]>([]);
+  const [productCount, setProductCount] = useState(0);
 
   useEffect(() => {
     fetchCatalog().then((data) => {
+      setProductCount(data.items.length);
       const sellers = TOP_SELLER_NAMES
         .map((name) => data.items.find((i) => i.name.toLowerCase() === name.toLowerCase()))
         .filter((item): item is MenuItem => item != null && Boolean(item.imageUrl));
@@ -93,7 +95,7 @@ export default function HomePage() {
       {/* Stats Bar */}
       <div ref={stats.ref} className={`stats-bar reveal ${stats.visible ? 'visible' : ''}`}>
         <div className="stat-block">
-          <span className="stat-block-num">100+</span>
+          <span className="stat-block-num">{productCount || '...'}</span>
           <span className="stat-block-label">{t('home.products')}</span>
         </div>
         <div className="stat-block">

@@ -74,6 +74,25 @@ function getOrdersByHour(orders: SalesOrder[]): number[] {
   return hours;
 }
 
+function exportCSV(orders: SalesOrder[]) {
+  const header = 'Date,Time,Customer,Items,Total,Status,Source\n';
+  const rows = orders.map((o) => {
+    const d = new Date(o.createdAt || '');
+    const date = d.toLocaleDateString('en-CA', { timeZone: 'America/Toronto' });
+    const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'America/Toronto' });
+    const items = (o.items || []).map((i: { quantity: number; name: string }) => `${i.quantity}x ${i.name}`).join('; ');
+    const total = (o.totalCents / 100).toFixed(2);
+    return `${date},${time},"${o.customerName || 'Walk-in'}","${items}",${total},${o.status},${o.source || 'POS'}`;
+  }).join('\n');
+  const blob = new Blob([header + rows], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `shake-sales-${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export default function AdminSales() {
   const [preset, setPreset] = useState<Preset>('today');
   const [customStart, setCustomStart] = useState('');
@@ -229,45 +248,54 @@ export default function AdminSales() {
 
       {/* Orders table */}
       <div className="adm-table-section">
-        <h2 className="adm-section-title">Orders</h2>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+          <h2 className="adm-section-title" style={{ marginBottom: 0, paddingBottom: 0, borderBottom: 'none' }}>Orders</h2>
+          {report && report.orders.length > 0 && (
+            <button className="adm-export-btn" onClick={() => exportCSV(report.orders)}>
+              EXPORT CSV
+            </button>
+          )}
+        </div>
         {loading ? (
           <p className="adm-muted">Loading...</p>
         ) : !report || report.orders.length === 0 ? (
           <p className="adm-muted">No orders for this period.</p>
         ) : (
-          <div className="adm-table-wrap">
-            <table className="adm-table">
-              <thead>
-                <tr>
-                  <th>Time</th>
-                  <th>Customer</th>
-                  <th>Items</th>
-                  <th>Total</th>
-                  <th>Status</th>
-                  <th>Source</th>
-                </tr>
-              </thead>
-              <tbody>
-                {report.orders.map((order) => (
-                    <tr key={order.id}>
-                      <td>{formatTime(order.createdAt)}</td>
-                      <td>{order.customerName}</td>
-                      <td className="adm-table-items">
-                        {(order.items || []).map((it, i) => (
-                          <span key={i}>{it.quantity}x {it.name}{i < order.items.length - 1 ? ', ' : ''}</span>
-                        ))}
-                      </td>
-                      <td>${(order.totalCents / 100).toFixed(2)}</td>
-                      <td>
-                        <span className="adm-table-status" style={{ color: order.status === 'completed' ? '#3d6b35' : '#e5a035' }}>
-                          {order.status}
-                        </span>
-                      </td>
-                      <td>{order.source}</td>
-                    </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="adm-sales-scroll">
+            <div className="adm-table-wrap">
+              <table className="adm-table">
+                <thead>
+                  <tr>
+                    <th>Time</th>
+                    <th>Customer</th>
+                    <th>Items</th>
+                    <th>Total</th>
+                    <th>Status</th>
+                    <th>Source</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {report.orders.map((order) => (
+                      <tr key={order.id}>
+                        <td>{formatTime(order.createdAt)}</td>
+                        <td>{order.customerName}</td>
+                        <td className="adm-table-items">
+                          {(order.items || []).map((it, i) => (
+                            <span key={i}>{it.quantity}x {it.name}{i < order.items.length - 1 ? ', ' : ''}</span>
+                          ))}
+                        </td>
+                        <td>${(order.totalCents / 100).toFixed(2)}</td>
+                        <td>
+                          <span className="adm-table-status" style={{ color: order.status === 'completed' ? '#3d6b35' : '#e5a035' }}>
+                            {order.status}
+                          </span>
+                        </td>
+                        <td>{order.source}</td>
+                      </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>

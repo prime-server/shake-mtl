@@ -3,57 +3,59 @@ import { auth } from '../../firebase';
 
 interface DailySummary {
   orderCount: number;
-  totalSales: number;
-  averageOrder: number;
+  totalSales: number;    // cents
+  totalTax: number;      // cents
+  averageOrder: number;  // cents
   pendingOrders: number;
 }
 
-interface SquareOrder {
+interface Transaction {
   id: string;
   customerName: string;
-  items: { name: string; quantity: number; priceCents: number }[];
+  items: { name: string; quantity: number }[];
   totalCents: number;
   status: string;
   source: string;
-  createdAt: string | null;
+  tenderType: string;
+  collectedBy: string;
+  createdAt: string;
 }
 
 interface Props {
   onNavigate: (section: 'dashboard' | 'orders' | 'sales' | 'inventory' | 'terminal') => void;
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  pending_payment: '#e5a035',
-  preparing: '#3d6b35',
-  ready: '#2563eb',
-  completed: '#6b7280',
-  open: '#e5a035',
-};
-
-const STATUS_LABELS: Record<string, string> = {
-  pending_payment: 'Awaiting Payment',
-  preparing: 'Preparing',
-  ready: 'Ready',
-  completed: 'Completed',
-  open: 'Open',
-};
-
-function getGreeting(): string {
-  const h = new Date().getHours();
-  if (h < 12) return 'GOOD MORNING';
-  if (h < 17) return 'GOOD AFTERNOON';
-  return 'GOOD EVENING';
-}
-
 async function getToken() {
   return auth.currentUser?.getIdToken() ?? null;
 }
 
+function formatTxTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+    timeZone: 'America/Toronto',
+  }).toLowerCase();
+}
+
+function formatDateHeader(): string {
+  return new Date().toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone: 'America/Toronto',
+  });
+}
+
+function cents(n: number): string {
+  return `$${(n / 100).toFixed(2)}`;
+}
+
 export default function AdminDashboard({ onNavigate }: Props) {
   const [summary, setSummary] = useState<DailySummary | null>(null);
-  const [recentOrders, setRecentOrders] = useState<SquareOrder[]>([]);
-  const [pendingCount, setPendingCount] = useState(0);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [txLoading, setTxLoading] = useState(true);
 
   useEffect(() => {
     let mounted = true;
@@ -62,80 +64,72 @@ export default function AdminDashboard({ onNavigate }: Props) {
         const token = await getToken();
         const headers: Record<string, string> = { Authorization: `Bearer ${token}` };
 
-        // Both endpoints now hit Square
+        // Fetch summary first (fast, server-side cached for 30s)
+        const sumResp = await fetch('/api/daily-summary', { headers });
+        if (mounted && sumResp.ok) {
+          setSummary(await sumResp.json());
+          setLoading(false); // Show stats immediately
+        }
+
+        // Then fetch transactions lazily (slower — hits Square orders search)
         const now = new Date();
         const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-        const [sumResp, salesResp] = await Promise.all([
-          fetch('/api/daily-summary', { headers }),
-          fetch('/api/sales-report', {
-            method: 'POST',
-            headers: { ...headers, 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              startDate: todayStart.toISOString(),
-              endDate: now.toISOString(),
-            }),
+        const salesResp = await fetch('/api/sales-report', {
+          method: 'POST',
+          headers: { ...headers, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            startDate: todayStart.toISOString(),
+            endDate: now.toISOString(),
           }),
-        ]);
+        });
 
-        if (mounted && sumResp.ok) {
-          const sumData = await sumResp.json();
-          setSummary(sumData);
-          setPendingCount(sumData.pendingOrders ?? 0);
-        }
         if (mounted && salesResp.ok) {
           const data = await salesResp.json();
-          const orders: SquareOrder[] = data.orders || [];
-          setRecentOrders(orders.slice(0, 10));
+          const orders: Transaction[] = (data.orders || []).filter(
+            (o: Transaction) => o.status === 'completed'
+          );
+          setTransactions(orders);
         }
       } catch {
         /* ignore */
       } finally {
-        if (mounted) setLoading(false);
+        if (mounted) {
+          setLoading(false);
+          setTxLoading(false);
+        }
       }
     })();
     return () => { mounted = false; };
   }, []);
 
-  const formatTime = (iso: string | null) => {
-    if (!iso) return '--';
-    return new Date(iso).toLocaleTimeString('en-CA', {
-      hour: '2-digit',
-      minute: '2-digit',
-      timeZone: 'America/Toronto',
-    });
-  };
+  const totalCollected = summary?.totalSales ?? 0;
+  const totalTax = summary?.totalTax ?? 0;
+  const netSales = totalCollected - totalTax;
 
   return (
     <div className="adm-dashboard">
-      <h1 className="adm-greeting">{getGreeting()}</h1>
-      <p className="adm-greeting-sub">Here is your daily overview.</p>
+      {/* Date header */}
+      <div className="adm-date-header">{formatDateHeader()}</div>
 
-      {/* Stat cards */}
+      {/* 3 stat cards */}
       <div className="adm-stat-row">
         <div className="adm-stat-card">
           <span className="adm-stat-num">
             {loading ? '--' : (summary?.orderCount ?? 0)}
           </span>
-          <span className="adm-stat-label">Today's Orders</span>
+          <span className="adm-stat-label">Complete Transactions</span>
         </div>
         <div className="adm-stat-card">
           <span className="adm-stat-num">
-            {loading ? '--' : `$${((summary?.totalSales ?? 0) / 100).toFixed(2)}`}
+            {loading ? '--' : cents(totalCollected)}
           </span>
-          <span className="adm-stat-label">Today's Sales</span>
+          <span className="adm-stat-label">Total Collected</span>
         </div>
         <div className="adm-stat-card">
           <span className="adm-stat-num">
-            {loading ? '--' : `$${((summary?.averageOrder ?? 0) / 100).toFixed(2)}`}
+            {loading ? '--' : cents(netSales)}
           </span>
-          <span className="adm-stat-label">Avg Order Value</span>
-        </div>
-        <div className="adm-stat-card">
-          <span className="adm-stat-num adm-stat-pending">
-            {loading ? '--' : pendingCount}
-          </span>
-          <span className="adm-stat-label">Pending Orders</span>
+          <span className="adm-stat-label">Net Sales</span>
         </div>
       </div>
 
@@ -149,48 +143,31 @@ export default function AdminDashboard({ onNavigate }: Props) {
         </button>
       </div>
 
-      {/* Recent orders */}
-      <div className="adm-recent-section">
-        <div className="adm-recent-header">
-          <h2>Recent Orders</h2>
-          <button className="adm-link-btn" onClick={() => onNavigate('orders')}>
-            View All
-          </button>
-        </div>
-        {loading ? (
-          <p className="adm-muted">Loading...</p>
-        ) : recentOrders.length === 0 ? (
-          <p className="adm-muted">No orders yet today.</p>
+      {/* Transaction list */}
+      <div className="adm-tx-list">
+        {txLoading ? (
+          <p className="adm-muted">Loading transactions...</p>
+        ) : transactions.length === 0 ? (
+          <p className="adm-muted">No completed transactions yet today.</p>
         ) : (
-          <div className="adm-recent-list">
-            {recentOrders.map((order) => (
-              <div key={order.id} className="adm-recent-item">
-                <div className="adm-recent-info">
-                  <span className="adm-recent-name">{order.customerName}</span>
-                  <span className="adm-recent-time">{formatTime(order.createdAt)}</span>
+          transactions.map((tx) => (
+            <div key={tx.id} className="adm-tx-row">
+              <div className="adm-tx-time">
+                {tx.createdAt ? formatTxTime(tx.createdAt) : '--'}
+              </div>
+              <div className="adm-tx-detail">
+                <div className="adm-tx-items">
+                  {tx.items.map((it) => it.name).join(', ') || 'Item'}
                 </div>
-                <div className="adm-recent-items-text">
-                  {(order.items || []).map((it, i) => (
-                    <span key={i}>{it.quantity}x {it.name}{i < order.items.length - 1 ? ', ' : ''}</span>
-                  ))}
-                  {' — '}
-                </div>
-                <div className="adm-recent-meta">
-                  <span className="adm-recent-total">${(order.totalCents / 100).toFixed(2)}</span>
-                  <span
-                    className="adm-recent-status"
-                    style={{
-                      background: (STATUS_COLORS[order.status] || '#6b7280') + '18',
-                      color: STATUS_COLORS[order.status] || '#6b7280',
-                    }}
-                  >
-                    {STATUS_LABELS[order.status] || order.status}
-                  </span>
-                  <span className="adm-recent-source">{order.source}</span>
+                <div className="adm-tx-collector">
+                  {tx.tenderType === 'CASH' ? '\uD83D\uDCB5' : '\uD83D\uDCB3'} Collected by {tx.collectedBy || 'Shake MTL'}
                 </div>
               </div>
-            ))}
-          </div>
+              <div className="adm-tx-amount">
+                {cents(tx.totalCents)}
+              </div>
+            </div>
+          ))
         )}
       </div>
     </div>

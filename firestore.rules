@@ -5,7 +5,8 @@ service cloud.firestore {
       allow read: if request.auth != null && request.auth.uid == uid;
       allow create: if request.auth != null && request.auth.uid == uid
         && request.resource.data.role == 'customer';
-      allow update: if false;
+      allow update: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.role == resource.data.role;
     }
     match /orders/{orderId} {
       allow read: if request.auth != null

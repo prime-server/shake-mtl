@@ -7,6 +7,7 @@
       { "source": "/api/checkout", "function": "checkout" },
       { "source": "/api/webhook", "function": "webhook" },
       { "source": "/api/orders", "function": "orders" },
+      { "source": "/api/order-start", "function": "orderStart" },
       { "source": "/api/order-ready", "function": "orderReady" },
       { "source": "/api/order-complete", "function": "orderComplete" },
       { "source": "/api/daily-summary", "function": "dailySummary" },

@@ -13,6 +13,17 @@ const SQUARE_BASE = "https://connect.squareup.com";
 const LOCATION_ID = "LEDCSA0Q805WD";
 
 // ============================================================
+// Server-side in-memory caches (per Cloud Functions instance)
+// ============================================================
+let catalogCache = null;
+let catalogCacheTime = 0;
+const CATALOG_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+let summaryCache = null;
+let summaryCacheTime = 0;
+const SUMMARY_CACHE_TTL = 30 * 1000; // 30 seconds
+
+// ============================================================
 // Rate limiter — in-memory, per Cloud Functions instance
 // ============================================================
 const rateLimitMap = new Map(); // ip -> { count, resetAt }
@@ -133,6 +144,14 @@ async function sq(path, opts = {}) {
 // ============================================================
 exports.catalog = onRequest({ cors: true, region: "us-east1", secrets: [squareToken] }, async (req, res) => {
   try {
+    // Return cached data if still fresh
+    const now = Date.now();
+    if (catalogCache && (now - catalogCacheTime) < CATALOG_CACHE_TTL) {
+      res.set("Cache-Control", "public, max-age=300, s-maxage=300");
+      res.json(catalogCache);
+      return;
+    }
+
     // Paginate to get ALL objects (Square returns max 100 per call)
     let allObjects = [];
     let cursor = null;
@@ -179,8 +198,12 @@ exports.catalog = onRequest({ cors: true, region: "us-east1", secrets: [squareTo
         };
       });
 
-    res.set("Cache-Control", "public, max-age=60, s-maxage=60");
-    res.json({ categories, items });
+    // Update server-side cache
+    catalogCache = { categories, items };
+    catalogCacheTime = Date.now();
+
+    res.set("Cache-Control", "public, max-age=300, s-maxage=300");
+    res.json(catalogCache);
   } catch (err) {
     console.error("Catalog error:", err);
     res.status(500).json({ error: "Failed to fetch catalog" });
@@ -381,6 +404,34 @@ exports.orders = onRequest({ cors: true, region: "us-east1", secrets: [squareTok
 });
 
 // ============================================================
+// POST /api/order-start — mark order as preparing (auth required)
+// ============================================================
+exports.orderStart = onRequest({ cors: true, region: "us-east1", secrets: [squareToken] }, async (req, res) => {
+  if (req.method !== "POST") { res.status(405).end(); return; }
+  const caller = await verifyStaff(req);
+  if (!caller) { res.status(403).json({ error: "Forbidden" }); return; }
+
+  try {
+    const { orderId } = req.body;
+    if (!orderId) { res.status(400).json({ error: "Missing orderId" }); return; }
+
+    const orderRef = db.collection("orders").doc(orderId);
+    const snap = await orderRef.get();
+
+    if (!snap.exists) { res.status(404).json({ error: "Order not found" }); return; }
+
+    await orderRef.update({
+      status: "preparing",
+    });
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Order start error:", err);
+    res.status(500).json({ error: "Failed to update order" });
+  }
+});
+
+// ============================================================
 // POST /api/order-ready — mark order ready + send SMS (auth required)
 // ============================================================
 exports.orderReady = onRequest({ cors: true, region: "us-east1", secrets: [squareToken] }, async (req, res) => {
@@ -486,6 +537,9 @@ function parseSquareOrder(o) {
   }));
   const source = o.source?.name || (o.tenders?.[0]?.type === "CASH" ? "POS (Cash)" : "POS");
   const customer = o.fulfillments?.[0]?.pickup_details?.recipient?.display_name || "Walk-in";
+  const tenderType = o.tenders?.[0]?.type || "UNKNOWN";
+  const employeeId = o.tenders?.[0]?.employee_id;
+  const collectedBy = employeeId ? `Employee ${employeeId}` : (o.source?.name || "Shake MTL");
   return {
     id: o.id,
     customerName: customer,
@@ -493,6 +547,8 @@ function parseSquareOrder(o) {
     totalCents,
     status: (o.state || "").toLowerCase(),
     source,
+    tenderType,
+    collectedBy,
     createdAt: o.created_at,
   };
 }
@@ -505,6 +561,14 @@ exports.dailySummary = onRequest({ cors: true, region: "us-east1", secrets: [squ
   if (!caller) { res.status(403).json({ error: "Forbidden" }); return; }
 
   try {
+    // Return cached data if still fresh (30s TTL)
+    const now = Date.now();
+    if (summaryCache && (now - summaryCacheTime) < SUMMARY_CACHE_TTL) {
+      res.set("Cache-Control", "public, max-age=30, s-maxage=30");
+      res.json(summaryCache);
+      return;
+    }
+
     const etNow = new Intl.DateTimeFormat("en-CA", {
       timeZone: "America/Toronto",
       year: "numeric", month: "2-digit", day: "2-digit",
@@ -516,18 +580,29 @@ exports.dailySummary = onRequest({ cors: true, region: "us-east1", secrets: [squ
     const completed = orders.filter((o) => o.state === "COMPLETED");
 
     let totalSales = 0;
-    completed.forEach((o) => { totalSales += o.total_money?.amount || 0; });
+    let totalTax = 0;
+    completed.forEach((o) => {
+      totalSales += o.total_money?.amount || 0;
+      totalTax += o.total_tax_money?.amount || 0;
+    });
 
     const pending = orders.filter((o) => o.state === "OPEN").length;
 
-    res.set("Cache-Control", "public, max-age=30, s-maxage=30");
-    res.json({
+    const result = {
       date: etNow,
       orderCount: completed.length,
       totalSales,
+      totalTax,
       averageOrder: completed.length > 0 ? Math.round(totalSales / completed.length) : 0,
       pendingOrders: pending,
-    });
+    };
+
+    // Update server-side cache
+    summaryCache = result;
+    summaryCacheTime = Date.now();
+
+    res.set("Cache-Control", "public, max-age=30, s-maxage=30");
+    res.json(result);
   } catch (err) {
     console.error("Daily summary error:", err);
     res.status(500).json({ error: "Failed to fetch summary" });
@@ -626,6 +701,9 @@ exports.catalogUpdate = onRequest({ cors: true, region: "us-east1", secrets: [sq
     });
 
     if (upsertResp.catalog_object) {
+      // Invalidate catalog cache so next request picks up the change
+      catalogCache = null;
+      catalogCacheTime = 0;
       res.json({ success: true, item: upsertResp.catalog_object });
     } else {
       console.error("Square catalog update error:", JSON.stringify(upsertResp));
