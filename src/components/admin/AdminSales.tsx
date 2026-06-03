@@ -6,8 +6,11 @@ interface SalesOrder {
   customerName: string;
   items: { name: string; quantity: number; priceCents: number }[];
   totalCents: number;
+  totalTaxCents: number;
   status: string;
   source: string;
+  cardBrand: string | null;
+  cardLast4: string | null;
   createdAt: string | null;
 }
 
@@ -75,16 +78,43 @@ function getOrdersByHour(orders: SalesOrder[]): number[] {
 }
 
 function exportCSV(orders: SalesOrder[]) {
-  const header = 'Date,Time,Customer,Items,Total,Status,Source\n';
-  const rows = orders.map((o) => {
+  const completed = orders.filter((o) => o.status === 'completed');
+
+  // Summary rows at top
+  const totalWithTax = completed.reduce((s, o) => s + o.totalCents, 0);
+  const totalTax = completed.reduce((s, o) => s + (o.totalTaxCents || 0), 0);
+  const gst = Math.round(totalTax * (5 / 14.975));
+  const qst = totalTax - gst;
+  const totalNoTax = totalWithTax - totalTax;
+
+  const summary = [
+    `SHAKE. MTL — Sales Report`,
+    `Generated,${new Date().toLocaleString('en-CA', { timeZone: 'America/Toronto' })}`,
+    ``,
+    `Total Collected (with tax),$${(totalWithTax / 100).toFixed(2)}`,
+    `Total Tax,$${(totalTax / 100).toFixed(2)}`,
+    `  GST (5%),$${(gst / 100).toFixed(2)}`,
+    `  QST (9.975%),$${(qst / 100).toFixed(2)}`,
+    `Net Sales (without tax),$${(totalNoTax / 100).toFixed(2)}`,
+    `Transactions,${completed.length}`,
+    ``,
+    `Date,Time,Customer,Items,Subtotal,Tax,Total,Payment,Card,Source`,
+  ].join('\n');
+
+  const rows = completed.map((o) => {
     const d = new Date(o.createdAt || '');
     const date = d.toLocaleDateString('en-CA', { timeZone: 'America/Toronto' });
     const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'America/Toronto' });
-    const items = (o.items || []).map((i: { quantity: number; name: string }) => `${i.quantity}x ${i.name}`).join('; ');
+    const items = (o.items || []).map((i) => `${i.quantity}x ${i.name}`).join('; ');
+    const tax = ((o.totalTaxCents || 0) / 100).toFixed(2);
     const total = (o.totalCents / 100).toFixed(2);
-    return `${date},${time},"${o.customerName || 'Walk-in'}","${items}",${total},${o.status},${o.source || 'POS'}`;
+    const subtotal = ((o.totalCents - (o.totalTaxCents || 0)) / 100).toFixed(2);
+    const payment = o.cardBrand || 'CASH';
+    const card = o.cardLast4 ? `****${o.cardLast4}` : '';
+    return `${date},${time},"${o.customerName || 'Walk-in'}","${items}",${subtotal},${tax},${total},${payment},${card},${o.source || 'POS'}`;
   }).join('\n');
-  const blob = new Blob([header + rows], { type: 'text/csv' });
+
+  const blob = new Blob([summary + '\n' + rows], { type: 'text/csv' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;

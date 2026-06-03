@@ -537,17 +537,26 @@ function parseSquareOrder(o) {
   }));
   const source = o.source?.name || (o.tenders?.[0]?.type === "CASH" ? "POS (Cash)" : "POS");
   const customer = o.fulfillments?.[0]?.pickup_details?.recipient?.display_name || "Walk-in";
-  const tenderType = o.tenders?.[0]?.type || "UNKNOWN";
-  const employeeId = o.tenders?.[0]?.employee_id;
+  const tender = o.tenders?.[0] || {};
+  const tenderType = tender.type || "UNKNOWN";
+  const cardBrand = tender.card_details?.card?.card_brand || null;
+  const cardLast4 = tender.card_details?.card?.last_4 || null;
+  const entryMethod = tender.card_details?.entry_method || null;
+  const employeeId = tender.employee_id;
   const collectedBy = employeeId ? `Employee ${employeeId}` : (o.source?.name || "Shake MTL");
+  const totalTaxCents = o.total_tax_money?.amount || 0;
   return {
     id: o.id,
     customerName: customer,
     items,
     totalCents,
+    totalTaxCents,
     status: (o.state || "").toLowerCase(),
     source,
     tenderType,
+    cardBrand,
+    cardLast4,
+    entryMethod,
     collectedBy,
     createdAt: o.created_at,
   };

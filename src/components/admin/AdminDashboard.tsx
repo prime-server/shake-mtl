@@ -14,12 +14,24 @@ interface Transaction {
   customerName: string;
   items: { name: string; quantity: number }[];
   totalCents: number;
+  totalTaxCents: number;
   status: string;
   source: string;
   tenderType: string;
+  cardBrand: string | null;
+  cardLast4: string | null;
+  entryMethod: string | null;
   collectedBy: string;
   createdAt: string;
 }
+
+const CARD_BRANDS: Record<string, { label: string; color: string; bg: string }> = {
+  VISA: { label: 'VISA', color: '#1a1f71', bg: '#f0f1fa' },
+  MASTERCARD: { label: 'MC', color: '#eb001b', bg: '#fef0f0' },
+  AMERICAN_EXPRESS: { label: 'AMEX', color: '#006fcf', bg: '#eef5fc' },
+  INTERAC: { label: 'INTERAC', color: '#ffb900', bg: '#fff8e6' },
+  DISCOVER: { label: 'DISC', color: '#ff6000', bg: '#fff3eb' },
+};
 
 interface Props {
   onNavigate: (section: 'dashboard' | 'orders' | 'sales' | 'inventory' | 'terminal') => void;
@@ -170,7 +182,20 @@ export default function AdminDashboard({ onNavigate }: Props) {
                   {tx.items.map((it) => it.name).join(', ') || 'Item'}
                 </div>
                 <div className="adm-tx-collector">
-                  {tx.tenderType === 'CASH' ? '\uD83D\uDCB5' : '\uD83D\uDCB3'} Collected by {tx.collectedBy || 'Shake MTL'}
+                  <span className="adm-tx-payment">
+                    {tx.tenderType === 'CASH' ? (
+                      <span className="adm-card-badge" style={{ background: '#e8f5e9', color: '#2e7d32' }}>CASH</span>
+                    ) : tx.cardBrand && CARD_BRANDS[tx.cardBrand] ? (
+                      <span className="adm-card-badge" style={{ background: CARD_BRANDS[tx.cardBrand].bg, color: CARD_BRANDS[tx.cardBrand].color }}>
+                        {CARD_BRANDS[tx.cardBrand].label}
+                        {tx.cardLast4 && <span className="adm-card-last4"> •••{tx.cardLast4}</span>}
+                      </span>
+                    ) : (
+                      <span className="adm-card-badge" style={{ background: '#f5f5f5', color: '#666' }}>CARD</span>
+                    )}
+                    {tx.entryMethod === 'CONTACTLESS' && <span className="adm-tap-icon" title="Tap">📶</span>}
+                  </span>
+                  Collected by {tx.collectedBy || 'Shake MTL'}
                 </div>
               </div>
               <div className="adm-tx-amount">
