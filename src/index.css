@@ -1752,13 +1752,12 @@ img { display: block; max-width: 100%; }
 }
 
 /* Catering Stats */
-.catering-stats {
-  display: flex;
-  justify-content: center;
-  gap: 48px;
-  padding: 48px 24px;
-  margin-bottom: 48px;
-}
+.catering-stats { display: flex; justify-content: center; gap: 48px; padding: 48px 24px; margin-bottom: 48px; }
+.catering-stats-bar { display: flex; justify-content: center; gap: 0; background: #141413; padding: 0; }
+.catering-stats-bar .catering-stat { flex: 1; padding: 24px 16px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); }
+.catering-stats-bar .catering-stat:last-child { border-right: none; }
+.catering-stats-bar .catering-stat-num { color: #fff; }
+.catering-stats-bar .catering-stat-label { color: rgba(255,255,255,0.5); }
 
 .catering-stat {
   text-align: center;
