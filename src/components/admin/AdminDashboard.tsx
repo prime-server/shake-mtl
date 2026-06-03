@@ -56,6 +56,7 @@ export default function AdminDashboard({ onNavigate }: Props) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [txLoading, setTxLoading] = useState(true);
+  const [hidden, setHidden] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -108,26 +109,35 @@ export default function AdminDashboard({ onNavigate }: Props) {
 
   return (
     <div className="adm-dashboard">
-      {/* Date header */}
-      <div className="adm-date-header">{formatDateHeader()}</div>
+      {/* Date header + eye toggle */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+        <div className="adm-date-header" style={{ marginBottom: 0 }}>{formatDateHeader()}</div>
+        <button
+          onClick={() => setHidden((h) => !h)}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, opacity: 0.5, padding: 8 }}
+          title={hidden ? 'Show numbers' : 'Hide numbers'}
+        >
+          {hidden ? '🙈' : '👁️'}
+        </button>
+      </div>
 
       {/* 3 stat cards */}
       <div className="adm-stat-row">
         <div className="adm-stat-card">
           <span className="adm-stat-num">
-            {loading ? '--' : (summary?.orderCount ?? 0)}
+            {loading ? '--' : hidden ? '••' : (summary?.orderCount ?? 0)}
           </span>
           <span className="adm-stat-label">Complete Transactions</span>
         </div>
         <div className="adm-stat-card">
           <span className="adm-stat-num">
-            {loading ? '--' : cents(totalCollected)}
+            {loading ? '--' : hidden ? '••••' : cents(totalCollected)}
           </span>
           <span className="adm-stat-label">Total Collected</span>
         </div>
         <div className="adm-stat-card">
           <span className="adm-stat-num">
-            {loading ? '--' : cents(netSales)}
+            {loading ? '--' : hidden ? '••••' : cents(netSales)}
           </span>
           <span className="adm-stat-label">Net Sales</span>
         </div>
@@ -164,7 +174,7 @@ export default function AdminDashboard({ onNavigate }: Props) {
                 </div>
               </div>
               <div className="adm-tx-amount">
-                {cents(tx.totalCents)}
+                {hidden ? '••••' : cents(tx.totalCents)}
               </div>
             </div>
           ))
