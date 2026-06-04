@@ -28,7 +28,10 @@ export default function Footer() {
 
         <div className="footer-col footer-social">
           <a href="https://instagram.com/shakemtl" target="_blank" rel="noopener noreferrer">
-            @SHAKEMTL
+            INSTAGRAM
+          </a>
+          <a href="https://tiktok.com/@shakemtl" target="_blank" rel="noopener noreferrer">
+            TIKTOK
           </a>
         </div>
       </div>

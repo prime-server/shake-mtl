@@ -15,9 +15,9 @@ const TOP_SELLER_NAMES = [
   'Operator Brew',
   'Engine Green',
   'Fuel Ros\u00E9e',
-  'Don\'t be Jelly',
   'Muscle Roll',
   'Golden Citrus',
+  'Don\'t be Jelly',
 ];
 
 export default function HomePage() {
