@@ -41,7 +41,7 @@ export default function HomePage() {
   return (
     <>
       <Hero />
-      <Ticker />
+      <Ticker categoryFilter={['smoothie', 'bowl', 'workout']} speed={35} />
 
       {/* Top Sellers */}
       <section className="product-showcase">
@@ -88,7 +88,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <Ticker />
+      <Ticker categoryFilter={['coffee', 'matcha', 'energy', 'snack']} speed={45} />
 
       <Social />
 
