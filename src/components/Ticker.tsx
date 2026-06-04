@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { fetchCatalog, type MenuItem } from '../data/menu';
 
 interface TickerProps {
@@ -9,6 +10,7 @@ interface TickerProps {
 
 export default function Ticker({ className = '', speed = 40, categoryFilter }: TickerProps) {
   const [products, setProducts] = useState<MenuItem[]>([]);
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchCatalog().then((data) => {
@@ -34,19 +36,28 @@ export default function Ticker({ className = '', speed = 40, categoryFilter }: T
     );
   }
 
+  const renderSet = (setIndex: number) => (
+    <div key={setIndex} className="ticker-set">
+      {products.map((item, i) => (
+        <button
+          key={`${setIndex}-${i}`}
+          className="ticker-product"
+          onClick={() => navigate('/menu')}
+          title={`${item.name} — $${item.price.toFixed(2)}`}
+        >
+          <img src={item.imageUrl!} alt={item.name} className="ticker-product-img" />
+          <span className="ticker-product-name">{item.name}</span>
+        </button>
+      ))}
+    </div>
+  );
+
   return (
     <div className={`ticker ticker-products ${className}`}>
       <div className="ticker-track" style={{ animationDuration: `${speed}s` }}>
-        {[0, 1].map((set) => (
-          <div key={set} className="ticker-set">
-            {products.map((item, i) => (
-              <div key={`${set}-${i}`} className="ticker-product">
-                <img src={item.imageUrl!} alt={item.name} className="ticker-product-img" />
-                <span className="ticker-product-name">{item.name}</span>
-              </div>
-            ))}
-          </div>
-        ))}
+        {renderSet(0)}
+        {renderSet(1)}
+        {renderSet(2)}
       </div>
     </div>
   );
