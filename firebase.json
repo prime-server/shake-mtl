@@ -9,6 +9,7 @@
       { "source": "/api/orders", "function": "orders" },
       { "source": "/api/order-start", "function": "orderStart" },
       { "source": "/api/order-ready", "function": "orderReady" },
+      { "source": "/api/order-delay", "function": "orderDelay" },
       { "source": "/api/order-complete", "function": "orderComplete" },
       { "source": "/api/daily-summary", "function": "dailySummary" },
       { "source": "/api/catalog-update", "function": "catalogUpdate" },

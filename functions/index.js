@@ -527,6 +527,48 @@ exports.orderStart = onRequest({ cors: true, region: "us-east1", secrets: [squar
 });
 
 // ============================================================
+// POST /api/order-delay — mark order delayed + send SMS (auth required)
+// ============================================================
+exports.orderDelay = onRequest({ cors: true, region: "us-east1" }, async (req, res) => {
+  if (req.method !== "POST") { res.status(405).end(); return; }
+  const caller = await verifyStaff(req);
+  if (!caller) { res.status(403).json({ error: "Forbidden" }); return; }
+
+  try {
+    const { orderId } = req.body;
+    if (!orderId) { res.status(400).json({ error: "Missing orderId" }); return; }
+
+    const orderRef = db.collection("orders").doc(orderId);
+    const snap = await orderRef.get();
+    if (!snap.exists) { res.status(404).json({ error: "Order not found" }); return; }
+
+    const order = snap.data();
+
+    await orderRef.update({
+      delayed: true,
+      delayedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    // Send delay SMS
+    let smsSent = false;
+    if (order.customerPhone) {
+      const phone = order.customerPhone.replace(/\D/g, "");
+      const formattedPhone = phone.startsWith("1") ? `+${phone}` : `+1${phone}`;
+      const name = order.customerName || "Client";
+      smsSent = await sendSMS(
+        formattedPhone,
+        `Bonjour ${name}, votre commande SHAKE. nécessite un délai supplémentaire d'environ 15 minutes. Nous nous excusons pour l'attente et vous remercions de votre patience. 🙏`
+      );
+    }
+
+    res.json({ success: true, smsSent });
+  } catch (err) {
+    console.error("Order delay error:", err);
+    res.status(500).json({ error: "Failed to delay order" });
+  }
+});
+
+// ============================================================
 // POST /api/order-ready — mark order ready + send SMS (auth required)
 // ============================================================
 exports.orderReady = onRequest({ cors: true, region: "us-east1", secrets: [squareToken] }, async (req, res) => {
@@ -557,10 +599,11 @@ exports.orderReady = onRequest({ cors: true, region: "us-east1", secrets: [squar
       const phone = order.customerPhone.replace(/\D/g, "");
       const formattedPhone = phone.startsWith("1") ? `+${phone}` : `+1${phone}`;
 
-      smsSent = await sendSMS(
-        formattedPhone,
-        `Hey ${order.customerName}! Your SHAKE. order is ready for pickup. 🥤 See you at the bar!`
-      );
+      const wasDelayed = order.delayed === true;
+      const smsText = wasDelayed
+        ? `Bonjour ${order.customerName || 'Client'}! 🥤 Votre commande SHAKE. est maintenant prête! Désolé pour l'attente, venez la récupérer au comptoir. Merci de votre patience!`
+        : `Bonjour ${order.customerName || 'Client'}! 🥤 Votre commande SHAKE. est prête! Venez la récupérer au comptoir. Merci et à bientôt!`;
+      smsSent = await sendSMS(formattedPhone, smsText);
 
       await orderRef.update({ smsSent });
     }
