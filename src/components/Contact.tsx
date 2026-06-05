@@ -67,11 +67,14 @@ export default function Contact() {
             <div className="contact-card">
               <div className="contact-icon">&#x1F4F1;</div>
               <h3>{t('contact.connect')}</h3>
-              <p>
+              <div className="contact-socials">
                 <a href="https://instagram.com/shakemtl" target="_blank" rel="noopener noreferrer">
-                  @shakemtl
+                  Instagram
                 </a>
-              </p>
+                <a href="https://tiktok.com/@shakemtl" target="_blank" rel="noopener noreferrer">
+                  TikTok
+                </a>
+              </div>
               <p className="contact-sub">{t('contact.dmUs')}</p>
             </div>
 

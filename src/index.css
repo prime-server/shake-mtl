@@ -1201,6 +1201,10 @@ img { display: block; max-width: 100%; }
 
 .contact-sub { margin-top: 6px; font-size: 11px !important; }
 
+.contact-socials { display: flex; gap: 12px; justify-content: center; margin-bottom: 6px; }
+.contact-socials a { font-family: var(--font-display); font-size: 13px; font-weight: 700; color: var(--text-primary); text-transform: uppercase; letter-spacing: 0.5px; }
+.contact-socials a:hover { opacity: 0.7; }
+
 /* Dynamic hours */
 .open-badge {
   display: inline-block;
@@ -1312,6 +1316,10 @@ img { display: block; max-width: 100%; }
 
 .footer-social {
   text-align: right;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end;
 }
 
 .footer-social a {
