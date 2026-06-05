@@ -26,6 +26,13 @@ export default function UpsellModal({ item, modifierLists, addOns, onConfirm, on
 
   // State: selected add-on IDs (checkboxes)
   const [selectedAddOns, setSelectedAddOns] = useState<Set<string>>(new Set());
+  const [showAllAddOns, setShowAllAddOns] = useState(false);
+
+  // Priority add-ons shown by default
+  const PRIORITY_ADDONS = ['almond milk', 'oat milk', 'protein milk', 'pvl creatine scoop', 'collagene scoop'];
+  const priorityAddOns = addOns.filter(a => PRIORITY_ADDONS.some(p => a.name.toLowerCase().includes(p)));
+  const extraAddOns = addOns.filter(a => !PRIORITY_ADDONS.some(p => a.name.toLowerCase().includes(p)));
+  const visibleAddOns = showAllAddOns ? addOns : priorityAddOns;
 
   const toggleAddOn = (id: string) => {
     setSelectedAddOns(prev => {
@@ -154,7 +161,7 @@ export default function UpsellModal({ item, modifierLists, addOns, onConfirm, on
         {addOns.length > 0 && (
           <div className="upsell-section">
             <div className="upsell-section-title">Add-ons</div>
-            {addOns.map(addon => (
+            {visibleAddOns.map(addon => (
               <label key={addon.id} className="upsell-option">
                 <input
                   type="checkbox"
@@ -165,6 +172,14 @@ export default function UpsellModal({ item, modifierLists, addOns, onConfirm, on
                 <span className="upsell-option-price">+${addon.price.toFixed(2)}</span>
               </label>
             ))}
+            {!showAllAddOns && extraAddOns.length > 0 && (
+              <button
+                className="upsell-see-more"
+                onClick={() => setShowAllAddOns(true)}
+              >
+                See more (+{extraAddOns.length})
+              </button>
+            )}
           </div>
         )}
 

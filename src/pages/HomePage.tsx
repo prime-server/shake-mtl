@@ -33,7 +33,7 @@ export default function HomePage() {
       setProductCount(data.items.length);
       const sellers = TOP_SELLER_NAMES
         .map((name) => data.items.find((i) => i.name.toLowerCase() === name.toLowerCase()))
-        .filter((item): item is MenuItem => item != null);
+        .filter((item): item is MenuItem => item != null && Boolean(item.imageUrl));
       setTopSellers(sellers);
     });
   }, []);
