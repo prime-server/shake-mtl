@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { auth } from '../../firebase';
 import LoginForm from '../LoginForm';
 import AdminDashboard from './AdminDashboard';
 import AdminOrders from './AdminOrders';
@@ -23,10 +24,63 @@ const NAV_ITEMS: { key: Section; label: string; icon: string }[] = [
 
 const ADMIN_EMAILS = ['shakemtl@gmail.com'];
 
+function playOrderAlert() {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    // Loud 3-tone alert
+    const notes = [880, 1100, 880, 1100, 880];
+    notes.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = freq;
+      gain.gain.value = 1.0;
+      osc.start(ctx.currentTime + i * 0.15);
+      osc.stop(ctx.currentTime + i * 0.15 + 0.12);
+    });
+  } catch { /* audio not supported */ }
+}
+
 export default function AdminLayout() {
   const { user, role, loading: authLoading, signOut } = useAuth();
   const [section, setSection] = useState<Section>('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(false);
+  const [newOrderCount, setNewOrderCount] = useState(0);
+  const prevIds = useRef<Set<string>>(new Set());
+
+  // Poll for new orders across ALL admin tabs
+  const checkNewOrders = useCallback(async () => {
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) return;
+      const resp = await fetch('/api/orders', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!resp.ok) return;
+      const data = await resp.json();
+      const orders = data.orders || [];
+      const activeOrders = orders.filter((o: any) => o.status !== 'completed');
+      const currentIds = new Set<string>(activeOrders.map((o: any) => o.id as string));
+      const pending = orders.filter((o: any) => o.status === 'pending_payment');
+      setNewOrderCount(pending.length);
+
+      // Detect genuinely new orders
+      if (prevIds.current.size > 0 && soundEnabled) {
+        const hasNew = activeOrders.some((o: any) => !prevIds.current.has(o.id));
+        if (hasNew) playOrderAlert();
+      }
+      prevIds.current = currentIds;
+    } catch { /* ignore */ }
+  }, [soundEnabled]);
+
+  useEffect(() => {
+    if (!user) return;
+    checkNewOrders();
+    const interval = setInterval(checkNewOrders, 10000);
+    return () => clearInterval(interval);
+  }, [user, checkNewOrders]);
 
   if (authLoading) {
     return (
@@ -88,6 +142,12 @@ export default function AdminLayout() {
             SHAKE<span>.</span>
           </div>
           <div className="adm-sidebar-subtitle">ADMIN</div>
+          <button
+            onClick={() => { setSoundEnabled(!soundEnabled); if (!soundEnabled) playOrderAlert(); }}
+            style={{ marginTop: 12, padding: '6px 14px', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 1000, background: soundEnabled ? '#3d6b35' : 'transparent', color: '#E8DDD0', fontSize: 11, fontFamily: 'var(--font-display)', fontWeight: 700, cursor: 'pointer', letterSpacing: 0.5 }}
+          >
+            {soundEnabled ? '🔔 SOUND ON' : '🔕 SOUND OFF'}
+          </button>
         </div>
 
         <nav className="adm-sidebar-nav">
@@ -99,6 +159,9 @@ export default function AdminLayout() {
             >
               <span className="adm-nav-icon">{item.icon}</span>
               <span className="adm-nav-label">{item.label}</span>
+              {item.key === 'orders' && newOrderCount > 0 && (
+                <span style={{ marginLeft: 'auto', minWidth: 20, height: 20, borderRadius: '50%', background: '#dc2626', color: '#fff', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'badgePulse 1.5s ease-in-out infinite' }}>{newOrderCount}</span>
+              )}
             </button>
           ))}
         </nav>
