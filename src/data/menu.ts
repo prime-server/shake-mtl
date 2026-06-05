@@ -1,11 +1,25 @@
+export interface Modifier {
+  id: string;
+  name: string;
+  priceCents: number;
+}
+
+export interface ModifierList {
+  id: string;
+  name: string;
+  modifiers: Modifier[];
+}
+
 export interface MenuItem {
   id: string;
   variationId: string | null;
   name: string;
   description: string;
   price: number;
+  priceCents?: number;
   categoryId: string | null;
   imageUrl: string | null;
+  modifierListIds?: string[];
 }
 
 export interface CategoryItem {
@@ -16,6 +30,8 @@ export interface CategoryItem {
 export interface CatalogData {
   categories: CategoryItem[];
   items: MenuItem[];
+  modifierLists: ModifierList[];
+  addOns: MenuItem[];
 }
 
 const CACHE_KEY = 'shake_catalog';
@@ -85,6 +101,6 @@ export async function fetchCatalog(): Promise<CatalogData> {
   try {
     return await inflightFetch;
   } catch {
-    return { categories: [], items: [] };
+    return { categories: [], items: [], modifierLists: [], addOns: [] };
   }
 }

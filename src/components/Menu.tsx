@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { fetchCatalog, type MenuItem, type CategoryItem } from '../data/menu';
+import { fetchCatalog, type MenuItem, type CategoryItem, type ModifierList } from '../data/menu';
 import { useReveal } from '../hooks/useReveal';
 import { useLang } from '../context/LangContext';
 import type { CartItem } from '../hooks/useCart';
+import UpsellModal from './UpsellModal';
 
 interface MenuProps {
   onAddToCart: (item: Omit<CartItem, 'quantity'>) => void;
@@ -27,14 +28,20 @@ const HIDDEN_ITEMS = [
   'PVL Creatine scoop', 'Peanut Butter',
 ];
 
+// Categories that should show the upsell modal
+const UPSELL_CATEGORIES = ['Smoothie & Bowls', 'Post Workout Smoothie'];
+
 export default function Menu({ onAddToCart }: MenuProps) {
   const [categories, setCategories] = useState<CategoryItem[]>([]);
   const [items, setItems] = useState<MenuItem[]>([]);
+  const [modifierLists, setModifierLists] = useState<ModifierList[]>([]);
+  const [addOnItems, setAddOnItems] = useState<MenuItem[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
   const [animKey, setAnimKey] = useState(0);
   const [loading, setLoading] = useState(true);
   const [addedId, setAddedId] = useState<string | null>(null);
+  const [upsellItem, setUpsellItem] = useState<MenuItem | null>(null);
   const { ref, visible } = useReveal();
   const { t } = useLang();
 
@@ -52,6 +59,8 @@ export default function Menu({ onAddToCart }: MenuProps) {
 
       setCategories(ordered);
       setItems(clean);
+      setModifierLists(data.modifierLists || []);
+      setAddOnItems(data.addOns || []);
       if (ordered.length > 0) setActiveId(ordered[0].id);
       setLoading(false);
     });
@@ -71,14 +80,35 @@ export default function Menu({ onAddToCart }: MenuProps) {
   };
 
   const handleAdd = (item: MenuItem) => {
+    // Check if this item's category qualifies for upsell
+    const cat = categories.find(c => c.id === item.categoryId);
+    const hasUpsell = cat && UPSELL_CATEGORIES.includes(cat.name);
+    const hasModifiers = (item.modifierListIds || []).length > 0;
+    const hasAddOns = addOnItems.length > 0;
+
+    if (hasUpsell && (hasModifiers || hasAddOns)) {
+      setUpsellItem(item);
+      return;
+    }
+
+    // Direct add (no upsell)
     onAddToCart({
       id: item.id,
+      cartKey: '',
       variationId: item.variationId || item.id,
       name: item.name,
       price: item.price,
+      basePrice: item.price,
       imageUrl: item.imageUrl,
     });
     setAddedId(item.id);
+    setTimeout(() => setAddedId(null), 1200);
+  };
+
+  const handleUpsellConfirm = (cartItem: Omit<CartItem, 'quantity'>) => {
+    onAddToCart(cartItem);
+    setAddedId(upsellItem?.id || null);
+    setUpsellItem(null);
     setTimeout(() => setAddedId(null), 1200);
   };
 
@@ -178,6 +208,16 @@ export default function Menu({ onAddToCart }: MenuProps) {
 
         </div>
       </div>
+
+      {upsellItem && (
+        <UpsellModal
+          item={upsellItem}
+          modifierLists={modifierLists}
+          addOns={addOnItems}
+          onConfirm={handleUpsellConfirm}
+          onClose={() => setUpsellItem(null)}
+        />
+      )}
     </section>
   );
 }

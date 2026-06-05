@@ -3,8 +3,9 @@ import { Link } from 'react-router-dom';
 import Ticker from '../components/Ticker';
 import Menu from '../components/Menu';
 import Footer from '../components/Footer';
+import UpsellModal from '../components/UpsellModal';
 import { useLang } from '../context/LangContext';
-import { fetchCatalog, type MenuItem } from '../data/menu';
+import { fetchCatalog, type MenuItem, type ModifierList, type CategoryItem } from '../data/menu';
 import type { CartItem } from '../hooks/useCart';
 
 interface MenuPageProps {
@@ -18,9 +19,15 @@ const TOP_SELLERS = [
   'Engine Green',
 ];
 
+const UPSELL_CATEGORIES = ['Smoothie & Bowls', 'Post Workout Smoothie'];
+
 export default function MenuPage({ onAddToCart }: MenuPageProps) {
   const { t } = useLang();
   const [topItems, setTopItems] = useState<MenuItem[]>([]);
+  const [modifierLists, setModifierLists] = useState<ModifierList[]>([]);
+  const [addOnItems, setAddOnItems] = useState<MenuItem[]>([]);
+  const [allCategories, setAllCategories] = useState<CategoryItem[]>([]);
+  const [upsellItem, setUpsellItem] = useState<MenuItem | null>(null);
 
   useEffect(() => {
     fetchCatalog().then((data) => {
@@ -28,17 +35,37 @@ export default function MenuPage({ onAddToCart }: MenuPageProps) {
         .map((name) => data.items.find((i) => i.name.toLowerCase() === name.toLowerCase()))
         .filter((item): item is MenuItem => item != null && Boolean(item.imageUrl));
       setTopItems(sellers);
+      setModifierLists(data.modifierLists || []);
+      setAddOnItems(data.addOns || []);
+      setAllCategories(data.categories || []);
     });
   }, []);
 
   const handleAdd = (item: MenuItem) => {
+    const cat = allCategories.find(c => c.id === item.categoryId);
+    const hasUpsell = cat && UPSELL_CATEGORIES.includes(cat.name);
+    const hasModifiers = (item.modifierListIds || []).length > 0;
+    const hasAddOns = addOnItems.length > 0;
+
+    if (hasUpsell && (hasModifiers || hasAddOns)) {
+      setUpsellItem(item);
+      return;
+    }
+
     onAddToCart({
       id: item.id,
+      cartKey: '',
       variationId: item.variationId || item.id,
       name: item.name,
       price: item.price,
+      basePrice: item.price,
       imageUrl: item.imageUrl,
     });
+  };
+
+  const handleUpsellConfirm = (cartItem: Omit<CartItem, 'quantity'>) => {
+    onAddToCart(cartItem);
+    setUpsellItem(null);
   };
 
   return (
@@ -84,6 +111,16 @@ export default function MenuPage({ onAddToCart }: MenuPageProps) {
       <Ticker />
       <Menu onAddToCart={onAddToCart} />
       <Footer />
+
+      {upsellItem && (
+        <UpsellModal
+          item={upsellItem}
+          modifierLists={modifierLists}
+          addOns={addOnItems}
+          onConfirm={handleUpsellConfirm}
+          onClose={() => setUpsellItem(null)}
+        />
+      )}
     </>
   );
 }

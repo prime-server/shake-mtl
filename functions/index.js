@@ -158,7 +158,7 @@ exports.catalog = onRequest({ cors: true, region: "us-east1", secrets: [squareTo
     let allObjects = [];
     let cursor = null;
     do {
-      const url = "/v2/catalog/list?types=ITEM,CATEGORY,IMAGE" + (cursor ? `&cursor=${cursor}` : "");
+      const url = "/v2/catalog/list?types=ITEM,CATEGORY,IMAGE,MODIFIER_LIST" + (cursor ? `&cursor=${cursor}` : "");
       const data = await sq(url);
       allObjects = allObjects.concat(data.objects || []);
       cursor = data.cursor || null;
@@ -189,6 +189,19 @@ exports.catalog = onRequest({ cors: true, region: "us-east1", secrets: [squareTo
       }
     } catch { /* no hidden items doc — show everything */ }
 
+    // Parse modifier lists (e.g. Milk options)
+    const modifierLists = allObjects
+      .filter((o) => o.type === "MODIFIER_LIST")
+      .map((ml) => ({
+        id: ml.id,
+        name: ml.modifier_list_data.name,
+        modifiers: (ml.modifier_list_data.modifiers || []).map((m) => ({
+          id: m.id,
+          name: m.modifier_data.name,
+          priceCents: m.modifier_data.price_money?.amount || 0,
+        })),
+      }));
+
     // Parse items — resolve images and categories, filter hidden
     const items = allObjects
       .filter((o) => o.type === "ITEM" && !o.is_deleted)
@@ -207,18 +220,23 @@ exports.catalog = onRequest({ cors: true, region: "us-east1", secrets: [squareTo
           categoryId: d.categories?.[0]?.id || d.category_id || null,
           imageUrl: imageId ? (images[imageId] || null) : null,
           hidden: hiddenIds.includes(item.id),
+          modifierListIds: d.modifier_list_info?.filter(m => m.enabled !== false).map(m => m.modifier_list_id) || [],
         };
       });
 
     // Public catalog excludes hidden items; admin gets all with hidden flag
     const visibleItems = isAdmin ? items : items.filter((i) => !i.hidden);
 
+    // Find "Extra" category and extract add-on items
+    const extraCatId = categories.find(c => c.name.toLowerCase() === "extra")?.id || null;
+    const addOns = extraCatId ? items.filter(i => i.categoryId === extraCatId) : [];
+
     // Update server-side cache (public version only)
-    catalogCache = { categories, items: visibleItems, allItems: items };
+    catalogCache = { categories, items: visibleItems, allItems: items, modifierLists, addOns };
     catalogCacheTime = Date.now();
 
     res.set("Cache-Control", "public, max-age=300, s-maxage=300");
-    res.json({ categories, items: isAdmin ? items : visibleItems });
+    res.json({ categories, items: isAdmin ? items : visibleItems, modifierLists, addOns });
   } catch (err) {
     console.error("Catalog error:", err);
     res.status(500).json({ error: "Failed to fetch catalog" });
@@ -242,10 +260,28 @@ exports.checkout = onRequest({ cors: true, region: "us-east1", secrets: [squareT
     const { items, customerName, customerPhone, customerEmail, pickupNote, pickupType, pickupDate, pickupTime } = req.body;
     if (!items?.length) { res.status(400).json({ error: "Cart empty" }); return; }
 
-    const lineItems = items.map((i) => ({
-      catalog_object_id: i.variationId,
-      quantity: String(i.quantity),
-    }));
+    const lineItems = [];
+    items.forEach((i) => {
+      // Main item with optional modifiers
+      const li = {
+        catalog_object_id: i.variationId,
+        quantity: String(i.quantity),
+      };
+      if (i.modifiers?.length) {
+        li.modifiers = i.modifiers.map((m) => ({ catalog_object_id: m.id }));
+      }
+      lineItems.push(li);
+
+      // Add-ons as separate line items
+      if (i.addOns?.length) {
+        i.addOns.forEach((addon) => {
+          lineItems.push({
+            catalog_object_id: addon.variationId,
+            quantity: String(i.quantity),
+          });
+        });
+      }
+    });
 
     const idempotencyKey = `co-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 

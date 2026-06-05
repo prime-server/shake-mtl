@@ -81,7 +81,12 @@ export default function Cart({ items, subtotal, open, onClose, onUpdateQty, onRe
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          items: items.map((i) => ({ variationId: i.variationId, quantity: i.quantity })),
+          items: items.map((i) => ({
+            variationId: i.variationId,
+            quantity: i.quantity,
+            modifiers: (i.modifiers || []).map(m => ({ id: m.id, name: m.name })),
+            addOns: (i.addOns || []).map(a => ({ id: a.id, variationId: a.variationId, name: a.name })),
+          })),
           customerName: name,
           customerPhone: phone,
           customerEmail: email,
@@ -127,20 +132,25 @@ export default function Cart({ items, subtotal, open, onClose, onUpdateQty, onRe
           <>
             <div className="cart-items">
               {items.map((item) => (
-                <div key={item.id} className="cart-item">
+                <div key={item.cartKey} className="cart-item">
                   {item.imageUrl && (
                     <img src={item.imageUrl} alt={item.name} className="cart-item-img" />
                   )}
                   <div className="cart-item-info">
                     <span className="cart-item-name">{item.name}</span>
+                    {((item.modifiers && item.modifiers.length > 0) || (item.addOns && item.addOns.length > 0)) && (
+                      <span className="cart-item-extras">
+                        {(item.modifiers || []).map(m => m.name).concat((item.addOns || []).map(a => a.name)).join(', ')}
+                      </span>
+                    )}
                     <span className="cart-item-price">${(item.price * item.quantity).toFixed(2)}</span>
                   </div>
                   <div className="cart-item-qty">
-                    <button onClick={() => onUpdateQty(item.id, item.quantity - 1)}>−</button>
+                    <button onClick={() => onUpdateQty(item.cartKey, item.quantity - 1)}>−</button>
                     <span>{item.quantity}</span>
-                    <button onClick={() => onUpdateQty(item.id, item.quantity + 1)}>+</button>
+                    <button onClick={() => onUpdateQty(item.cartKey, item.quantity + 1)}>+</button>
                   </div>
-                  <button className="cart-item-remove" onClick={() => onRemove(item.id)}>
+                  <button className="cart-item-remove" onClick={() => onRemove(item.cartKey)}>
                     <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                       <path d="M3 3l8 8M11 3L3 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
                     </svg>
