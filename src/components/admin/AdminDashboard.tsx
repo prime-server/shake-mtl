@@ -34,7 +34,7 @@ const CARD_BRANDS: Record<string, { label: string; color: string; bg: string }> 
 };
 
 interface Props {
-  onNavigate: (section: 'dashboard' | 'orders' | 'sales' | 'inventory' | 'terminal') => void;
+  onNavigate: (section: 'dashboard' | 'orders' | 'sales' | 'stats' | 'schedule' | 'inventory' | 'terminal') => void;
 }
 
 async function getToken() {
