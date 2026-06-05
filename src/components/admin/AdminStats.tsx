@@ -57,6 +57,8 @@ export default function AdminStats() {
   const [categories, setCategories] = useState<CatalogCategory[]>([]);
   const [catalogItems, setCatalogItems] = useState<CatalogItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hideMoney, setHideMoney] = useState(true);
+  const mask = (val: string) => hideMoney ? '••••' : val;
 
   useEffect(() => {
     fetchData();
@@ -200,12 +202,20 @@ export default function AdminStats() {
 
   return (
     <div className="adm-stats">
-      <div className="adm-page-header"><h1>Statistics</h1></div>
+      <div className="adm-page-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <h1>Statistics</h1>
+        <button
+          onClick={() => setHideMoney((h) => !h)}
+          style={{ background: 'none', border: '1px solid rgba(0,0,0,0.1)', borderRadius: 1000, cursor: 'pointer', fontSize: 11, fontFamily: 'var(--font-display)', fontWeight: 700, letterSpacing: 0.5, color: '#7a7167', padding: '6px 14px' }}
+        >
+          {hideMoney ? 'SHOW $' : 'HIDE $'}
+        </button>
+      </div>
 
       {/* Key Metrics */}
       <div className="adm-stats-metrics">
         <div className="adm-stats-metric">
-          <span className="adm-stats-metric-num">{fmtMoney(totalRevenue)}</span>
+          <span className="adm-stats-metric-num">{mask(fmtMoney(totalRevenue))}</span>
           <span className="adm-stats-metric-label">Total Revenue</span>
         </div>
         <div className="adm-stats-metric">
@@ -213,7 +223,7 @@ export default function AdminStats() {
           <span className="adm-stats-metric-label">Total Orders</span>
         </div>
         <div className="adm-stats-metric">
-          <span className="adm-stats-metric-num">{fmtMoney(avgOrder)}</span>
+          <span className="adm-stats-metric-num">{mask(fmtMoney(avgOrder))}</span>
           <span className="adm-stats-metric-label">Avg Order Value</span>
         </div>
         <div className="adm-stats-metric">
@@ -245,7 +255,7 @@ export default function AdminStats() {
             <span className="adm-stats-bar-label" title={catName}>{catName}</span>
             <div className="adm-stats-bar-track">
               <div className="adm-stats-bar-fill" style={{ width: `${(cents / maxCatRev) * 100}%` }}>
-                <span className="adm-stats-bar-val">{fmtMoney(cents)}</span>
+                <span className="adm-stats-bar-val">{mask(fmtMoney(cents))}</span>
               </div>
             </div>
           </div>
@@ -280,7 +290,7 @@ export default function AdminStats() {
         <div className="adm-stats-daily">
           {dailyRev.map((d) => (
             <div key={d.label} className="adm-stats-daily-bar">
-              <span className="adm-stats-daily-val">{d.cents > 0 ? fmtMoney(d.cents) : ''}</span>
+              <span className="adm-stats-daily-val">{d.cents > 0 ? mask(fmtMoney(d.cents)) : ''}</span>
               <div
                 className="adm-stats-daily-fill"
                 style={{ height: `${(d.cents / maxDailyRev) * 100}%` }}
