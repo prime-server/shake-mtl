@@ -32,11 +32,15 @@ export default function UpsellModal({ item, modifierLists, addOns, onConfirm, on
   const [showAddOns, setShowAddOns] = useState(false);
   const [showAllAddOns, setShowAllAddOns] = useState(false);
 
+  // Separate protein scoop from other add-ons
+  const proteinScoop = addOns.find(a => a.name.toLowerCase().includes('protein scoop'));
+  const otherAddOns = addOns.filter(a => !a.name.toLowerCase().includes('protein scoop'));
+
   // Priority add-ons shown when expanded
   const PRIORITY_ADDONS = ['almond milk', 'oat milk', 'protein milk', 'pvl creatine scoop', 'collagene scoop'];
-  const priorityAddOns = addOns.filter(a => PRIORITY_ADDONS.some(p => a.name.toLowerCase().includes(p)));
-  const extraAddOns = addOns.filter(a => !PRIORITY_ADDONS.some(p => a.name.toLowerCase().includes(p)));
-  const visibleAddOns = showAllAddOns ? addOns : priorityAddOns;
+  const priorityAddOns = otherAddOns.filter(a => PRIORITY_ADDONS.some(p => a.name.toLowerCase().includes(p)));
+  const extraAddOns = otherAddOns.filter(a => !PRIORITY_ADDONS.some(p => a.name.toLowerCase().includes(p)));
+  const visibleAddOns = showAllAddOns ? otherAddOns : priorityAddOns;
 
   const toggleAddOn = (id: string) => {
     setSelectedAddOns(prev => {
@@ -161,8 +165,24 @@ export default function UpsellModal({ item, modifierLists, addOns, onConfirm, on
           </div>
         ))}
 
+        {/* Protein Scoop — standalone, pre-selected */}
+        {proteinScoop && (
+          <div className="upsell-section">
+            <div className="upsell-section-title">Protein</div>
+            <label className="upsell-option">
+              <input
+                type="checkbox"
+                checked={selectedAddOns.has(proteinScoop.id)}
+                onChange={() => toggleAddOn(proteinScoop.id)}
+              />
+              <span className="upsell-option-name">{proteinScoop.name} (included by default)</span>
+              <span className="upsell-option-price">+${proteinScoop.price.toFixed(2)}</span>
+            </label>
+          </div>
+        )}
+
         {/* Add-ons — collapsed by default */}
-        {addOns.length > 0 && (
+        {otherAddOns.length > 0 && (
           <div className="upsell-section">
             <button className="upsell-section-toggle" onClick={() => setShowAddOns(!showAddOns)}>
               <span className="upsell-section-title" style={{ margin: 0 }}>Add-ons {selectedAddOns.size > 0 ? `(${selectedAddOns.size} selected)` : ''}</span>
