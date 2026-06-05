@@ -52,6 +52,23 @@ function normalizeCardBrand(brand: string | null): string {
 
 /* ── Component ────────────────────────────────── */
 
+type Preset = 'today' | 'yesterday' | 'week' | 'month' | 'last30' | 'custom';
+
+const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+function getPresetRange(preset: Preset): { start: Date; end: Date } {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  switch (preset) {
+    case 'today': return { start: today, end: now };
+    case 'yesterday': { const y = new Date(today); y.setDate(y.getDate() - 1); return { start: y, end: today }; }
+    case 'week': { const w = new Date(today); w.setDate(w.getDate() - 7); return { start: w, end: now }; }
+    case 'month': return { start: new Date(now.getFullYear(), now.getMonth(), 1), end: now };
+    case 'last30': { const d = new Date(today); d.setDate(d.getDate() - 30); return { start: d, end: now }; }
+    default: return { start: new Date(today), end: now };
+  }
+}
+
 export default function AdminStats() {
   const [orders, setOrders] = useState<SalesOrder[]>([]);
   const [categories, setCategories] = useState<CatalogCategory[]>([]);
@@ -60,23 +77,37 @@ export default function AdminStats() {
   const [hideMoney, setHideMoney] = useState(true);
   const mask = (val: string) => hideMoney ? '••••' : val;
 
+  const [preset, setPreset] = useState<Preset>('last30');
+  const [customStart, setCustomStart] = useState('');
+  const [customEnd, setCustomEnd] = useState('');
+  const [selectedMonth, setSelectedMonth] = useState('');
+
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [preset, selectedMonth]);
 
   const fetchData = async () => {
     setLoading(true);
     try {
       const token = await auth.currentUser?.getIdToken();
-      const now = new Date();
-      const thirtyDaysAgo = new Date(now);
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      let start: Date, end: Date;
+
+      if (preset === 'custom' && customStart && customEnd) {
+        start = new Date(customStart + 'T00:00:00');
+        end = new Date(customEnd + 'T23:59:59');
+      } else if (selectedMonth) {
+        const [y, m] = selectedMonth.split('-').map(Number);
+        start = new Date(y, m - 1, 1);
+        end = new Date(y, m, 0, 23, 59, 59);
+      } else {
+        ({ start, end } = getPresetRange(preset));
+      }
 
       const [salesResp, catalogResp] = await Promise.all([
         fetch('/api/sales-report', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ startDate: thirtyDaysAgo.toISOString(), endDate: now.toISOString() }),
+          body: JSON.stringify({ startDate: start.toISOString(), endDate: end.toISOString() }),
         }),
         fetch('/api/catalog'),
       ]);
@@ -210,6 +241,32 @@ export default function AdminStats() {
         >
           {hideMoney ? 'SHOW $' : 'HIDE $'}
         </button>
+      </div>
+
+      {/* Date Filters */}
+      <div className="adm-stats-filters">
+        <div className="adm-stats-presets">
+          {([['today','Today'],['yesterday','Yesterday'],['week','7 Days'],['month','This Month'],['last30','30 Days']] as [Preset,string][]).map(([key,label]) => (
+            <button key={key} className={`adm-stats-preset ${preset === key && !selectedMonth ? 'active' : ''}`} onClick={() => { setPreset(key); setSelectedMonth(''); }}>{label}</button>
+          ))}
+        </div>
+        <div className="adm-stats-custom-row">
+          <select className="adm-stats-month-select" value={selectedMonth} onChange={(e) => { setSelectedMonth(e.target.value); if (e.target.value) setPreset('custom'); }}>
+            <option value="">Select Month...</option>
+            {Array.from({ length: 12 }, (_, i) => {
+              const d = new Date();
+              d.setMonth(d.getMonth() - i);
+              const val = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+              return <option key={val} value={val}>{MONTH_NAMES[d.getMonth()]} {d.getFullYear()}</option>;
+            })}
+          </select>
+          <input type="date" className="adm-stats-date-input" value={customStart} onChange={(e) => { setCustomStart(e.target.value); setPreset('custom'); setSelectedMonth(''); }} />
+          <span style={{ color: '#7a7167', fontSize: 12 }}>to</span>
+          <input type="date" className="adm-stats-date-input" value={customEnd} onChange={(e) => { setCustomEnd(e.target.value); setPreset('custom'); setSelectedMonth(''); }} />
+          {preset === 'custom' && customStart && customEnd && (
+            <button className="adm-stats-preset active" onClick={fetchData}>APPLY</button>
+          )}
+        </div>
       </div>
 
       {/* Key Metrics */}

@@ -24,11 +24,15 @@ export default function UpsellModal({ item, modifierLists, addOns, onConfirm, on
     return init;
   });
 
-  // State: selected add-on IDs (checkboxes)
-  const [selectedAddOns, setSelectedAddOns] = useState<Set<string>>(new Set());
+  // State: selected add-on IDs — protein scoop pre-selected by default
+  const [selectedAddOns, setSelectedAddOns] = useState<Set<string>>(() => {
+    const proteinScoop = addOns.find(a => a.name.toLowerCase().includes('protein scoop'));
+    return proteinScoop ? new Set([proteinScoop.id]) : new Set();
+  });
+  const [showAddOns, setShowAddOns] = useState(false);
   const [showAllAddOns, setShowAllAddOns] = useState(false);
 
-  // Priority add-ons shown by default
+  // Priority add-ons shown when expanded
   const PRIORITY_ADDONS = ['almond milk', 'oat milk', 'protein milk', 'pvl creatine scoop', 'collagene scoop'];
   const priorityAddOns = addOns.filter(a => PRIORITY_ADDONS.some(p => a.name.toLowerCase().includes(p)));
   const extraAddOns = addOns.filter(a => !PRIORITY_ADDONS.some(p => a.name.toLowerCase().includes(p)));
@@ -139,7 +143,7 @@ export default function UpsellModal({ item, modifierLists, addOns, onConfirm, on
                 checked={selectedModifiers[ml.id] === null}
                 onChange={() => setSelectedModifiers(prev => ({ ...prev, [ml.id]: null }))}
               />
-              <span className="upsell-option-name">None</span>
+              <span className="upsell-option-name">Regular Milk (included)</span>
               <span className="upsell-option-price">FREE</span>
             </label>
             {ml.modifiers.map(mod => (
@@ -157,28 +161,32 @@ export default function UpsellModal({ item, modifierLists, addOns, onConfirm, on
           </div>
         ))}
 
-        {/* Add-ons */}
+        {/* Add-ons — collapsed by default */}
         {addOns.length > 0 && (
           <div className="upsell-section">
-            <div className="upsell-section-title">Add-ons</div>
-            {visibleAddOns.map(addon => (
-              <label key={addon.id} className="upsell-option">
-                <input
-                  type="checkbox"
-                  checked={selectedAddOns.has(addon.id)}
-                  onChange={() => toggleAddOn(addon.id)}
-                />
-                <span className="upsell-option-name">{addon.name}</span>
-                <span className="upsell-option-price">+${addon.price.toFixed(2)}</span>
-              </label>
-            ))}
-            {!showAllAddOns && extraAddOns.length > 0 && (
-              <button
-                className="upsell-see-more"
-                onClick={() => setShowAllAddOns(true)}
-              >
-                See more (+{extraAddOns.length})
-              </button>
+            <button className="upsell-section-toggle" onClick={() => setShowAddOns(!showAddOns)}>
+              <span className="upsell-section-title" style={{ margin: 0 }}>Add-ons {selectedAddOns.size > 0 ? `(${selectedAddOns.size} selected)` : ''}</span>
+              <span style={{ fontSize: 14 }}>{showAddOns ? '▲' : '▼'}</span>
+            </button>
+            {showAddOns && (
+              <>
+                {visibleAddOns.map(addon => (
+                  <label key={addon.id} className="upsell-option">
+                    <input
+                      type="checkbox"
+                      checked={selectedAddOns.has(addon.id)}
+                      onChange={() => toggleAddOn(addon.id)}
+                    />
+                    <span className="upsell-option-name">{addon.name}</span>
+                    <span className="upsell-option-price">+${addon.price.toFixed(2)}</span>
+                  </label>
+                ))}
+                {!showAllAddOns && extraAddOns.length > 0 && (
+                  <button className="upsell-see-more" onClick={() => setShowAllAddOns(true)}>
+                    See more (+{extraAddOns.length})
+                  </button>
+                )}
+              </>
             )}
           </div>
         )}
