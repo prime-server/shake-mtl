@@ -68,7 +68,7 @@ export default function AdminDashboard({ onNavigate }: Props) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [txLoading, setTxLoading] = useState(true);
-  const [hidden, setHidden] = useState(false);
+  const [hidden, setHidden] = useState(true);
 
   useEffect(() => {
     let mounted = true;
@@ -132,10 +132,10 @@ export default function AdminDashboard({ onNavigate }: Props) {
         <div className="adm-date-header" style={{ marginBottom: 0 }}>{formatDateHeader()}</div>
         <button
           onClick={() => setHidden((h) => !h)}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, opacity: 0.5, padding: 8 }}
+          style={{ background: 'none', border: '1px solid rgba(0,0,0,0.1)', borderRadius: 1000, cursor: 'pointer', fontSize: 11, fontFamily: 'var(--font-display)', fontWeight: 700, letterSpacing: 0.5, color: '#7a7167', padding: '6px 14px' }}
           title={hidden ? 'Show numbers' : 'Hide numbers'}
         >
-          {hidden ? '🙈' : '👁️'}
+          {hidden ? 'SHOW' : 'HIDE'}
         </button>
       </div>
 
