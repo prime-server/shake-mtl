@@ -24,22 +24,34 @@ const NAV_ITEMS: { key: Section; label: string; icon: string }[] = [
 
 const ADMIN_EMAILS = ['shakemtl@gmail.com'];
 
+// Safari-compatible audio: create AudioContext on user gesture, reuse for alerts
+let audioCtx: AudioContext | null = null;
+
+function unlockAudio() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+  }
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+}
+
 function playOrderAlert() {
+  if (!audioCtx) return;
   try {
-    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    // Loud 3-tone alert
-    const notes = [880, 1100, 880, 1100, 880];
-    notes.forEach((freq, i) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
+    const now = audioCtx.currentTime;
+    // Loud repeating alert — 6 tones
+    [0, 0.18, 0.36, 0.54, 0.72, 0.9].forEach((delay, i) => {
+      const osc = audioCtx!.createOscillator();
+      const gain = audioCtx!.createGain();
       osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.frequency.value = freq;
+      gain.connect(audioCtx!.destination);
+      osc.frequency.value = i % 2 === 0 ? 1000 : 1300;
       gain.gain.value = 1.0;
-      osc.start(ctx.currentTime + i * 0.15);
-      osc.stop(ctx.currentTime + i * 0.15 + 0.12);
+      osc.start(now + delay);
+      osc.stop(now + delay + 0.14);
     });
-  } catch { /* audio not supported */ }
+  } catch { /* ignore */ }
 }
 
 export default function AdminLayout() {
@@ -143,7 +155,7 @@ export default function AdminLayout() {
           </div>
           <div className="adm-sidebar-subtitle">ADMIN</div>
           <button
-            onClick={() => { setSoundEnabled(!soundEnabled); if (!soundEnabled) playOrderAlert(); }}
+            onClick={() => { unlockAudio(); setSoundEnabled(!soundEnabled); if (!soundEnabled) playOrderAlert(); }}
             style={{ marginTop: 12, padding: '6px 14px', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 1000, background: soundEnabled ? '#3d6b35' : 'transparent', color: '#E8DDD0', fontSize: 11, fontFamily: 'var(--font-display)', fontWeight: 700, cursor: 'pointer', letterSpacing: 0.5 }}
           >
             {soundEnabled ? '🔔 SOUND ON' : '🔕 SOUND OFF'}
