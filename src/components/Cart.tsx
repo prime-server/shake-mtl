@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import type { CartItem } from '../hooks/useCart';
 import { useAuth } from '../context/AuthContext';
 import { useLang } from '../context/LangContext';
-import { useGymHours, getPickupSlots } from '../hooks/useGymHours';
+import { useOrderSchedule, getOrderSlots, isOrderingOpen, DEFAULT_SCHEDULE } from '../hooks/useOrderSchedule';
 
 interface CartProps {
   items: CartItem[];
@@ -17,7 +17,8 @@ interface CartProps {
 export default function Cart({ items, subtotal, open, onClose, onUpdateQty, onRemove, onClear }: CartProps) {
   const { user } = useAuth();
   const { t } = useLang();
-  const { periods } = useGymHours();
+  const { schedule: orderSchedule, loading: scheduleLoading } = useOrderSchedule();
+  const schedule = orderSchedule || DEFAULT_SCHEDULE;
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
@@ -50,8 +51,8 @@ export default function Cart({ items, subtotal, open, onClose, onUpdateQty, onRe
   const timeSlots = useMemo(() => {
     if (!pickupDate) return [];
     const d = new Date(pickupDate + 'T12:00:00');
-    return getPickupSlots(d, periods);
-  }, [pickupDate, periods]);
+    return getOrderSlots(d, schedule);
+  }, [pickupDate, schedule]);
 
   // Set default date when switching to scheduled
   useEffect(() => {
@@ -225,9 +226,15 @@ export default function Cart({ items, subtotal, open, onClose, onUpdateQty, onRe
 
             {error && <p className="cart-error">{error}</p>}
 
-            <button className="btn btn-primary btn-full cart-checkout-btn" onClick={handleCheckout} disabled={loading}>
-              {loading ? t('cart.processing') : `${t('cart.pay')} — $${total.toFixed(2)}`}
-            </button>
+            {!scheduleLoading && !isOrderingOpen(schedule) ? (
+              <div className="cart-closed-msg">
+                <p>Online ordering is currently closed. Check back during business hours.</p>
+              </div>
+            ) : (
+              <button className="btn btn-primary btn-full cart-checkout-btn" onClick={handleCheckout} disabled={loading}>
+                {loading ? t('cart.processing') : `${t('cart.pay')} — $${total.toFixed(2)}`}
+              </button>
+            )}
 
             <div className="cart-delivery-alt">
               <p>{t('cart.delivery')}</p>

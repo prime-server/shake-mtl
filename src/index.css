@@ -3519,6 +3519,17 @@ img { display: block; max-width: 100%; }
   gap: 4px;
 }
 
+/* Schedule Editor */
+.adm-schedule { max-width: 600px; }
+.adm-schedule-table { width: 100%; border-collapse: separate; border-spacing: 0 8px; }
+.adm-schedule-row td { padding: 12px 8px; background: #F9F6F2; vertical-align: middle; }
+.adm-schedule-row td:first-child { border-radius: 10px 0 0 10px; font-family: var(--font-display); font-weight: 700; font-size: 13px; text-transform: uppercase; padding-left: 16px; }
+.adm-schedule-row td:last-child { border-radius: 0 10px 10px 0; padding-right: 16px; }
+.adm-schedule-toggle { width: 18px; height: 18px; accent-color: var(--text-primary); cursor: pointer; }
+.adm-schedule-time { padding: 8px 12px; border: 1px solid rgba(0,0,0,0.08); border-radius: 8px; font-size: 14px; font-family: var(--font); width: 100px; background: #fff; }
+.adm-schedule-time:disabled { opacity: 0.3; }
+.adm-schedule-save { margin-top: 16px; }
+
 /* Terminal */
 .adm-terminal-grid {
   display: grid;
@@ -4163,6 +4174,13 @@ img { display: block; max-width: 100%; }
     max-width: 100%; max-height: 92vh;
     border-radius: 20px 20px 0 0;
   }
+}
+
+/* Cart closed message */
+.cart-closed-msg {
+  text-align: center; padding: 16px 20px; margin: 0 0 8px;
+  background: #FFF3CD; border-radius: 10px; color: #856404;
+  font-size: 13px; font-weight: 600; line-height: 1.4;
 }
 
 /* ---- PREVENT HORIZONTAL OVERFLOW GLOBALLY ---- */

@@ -140,6 +140,50 @@ async function sq(path, opts = {}) {
 }
 
 // ============================================================
+// Default order schedule (matches Google hours)
+// ============================================================
+const DEFAULT_SCHEDULE = {
+  "0": { open: "07:00", close: "19:00", enabled: true },
+  "1": { open: "05:00", close: "23:00", enabled: true },
+  "2": { open: "05:00", close: "23:00", enabled: true },
+  "3": { open: "05:00", close: "23:00", enabled: true },
+  "4": { open: "05:00", close: "23:00", enabled: true },
+  "5": { open: "05:00", close: "22:00", enabled: true },
+  "6": { open: "07:00", close: "19:00", enabled: true },
+};
+
+// ============================================================
+// GET/POST /api/order-schedule — manage ordering hours
+// ============================================================
+exports.orderSchedule = onRequest({ cors: true, region: "us-east1" }, async (req, res) => {
+  if (req.method === "GET") {
+    try {
+      const snap = await db.doc("settings/orderSchedule").get();
+      res.json(snap.exists ? snap.data() : { schedule: DEFAULT_SCHEDULE });
+    } catch (err) {
+      console.error("Order schedule GET error:", err);
+      res.json({ schedule: DEFAULT_SCHEDULE });
+    }
+    return;
+  }
+  if (req.method === "POST") {
+    const caller = await verifyStaff(req);
+    if (!caller) { res.status(403).json({ error: "Forbidden" }); return; }
+    try {
+      const { schedule } = req.body;
+      if (!schedule) { res.status(400).json({ error: "Missing schedule" }); return; }
+      await db.doc("settings/orderSchedule").set({ schedule });
+      res.json({ success: true });
+    } catch (err) {
+      console.error("Order schedule POST error:", err);
+      res.status(500).json({ error: "Failed to save schedule" });
+    }
+    return;
+  }
+  res.status(405).end();
+});
+
+// ============================================================
 // GET /api/catalog — pull full catalog with images from Square
 // ============================================================
 exports.catalog = onRequest({ cors: true, region: "us-east1", secrets: [squareToken] }, async (req, res) => {

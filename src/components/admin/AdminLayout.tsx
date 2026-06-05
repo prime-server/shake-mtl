@@ -6,13 +6,15 @@ import AdminOrders from './AdminOrders';
 import AdminSales from './AdminSales';
 import AdminInventory from './AdminInventory';
 import AdminTerminal from './AdminTerminal';
+import AdminSchedule from './AdminSchedule';
 
-type Section = 'dashboard' | 'orders' | 'sales' | 'inventory' | 'terminal';
+type Section = 'dashboard' | 'orders' | 'sales' | 'schedule' | 'inventory' | 'terminal';
 
 const NAV_ITEMS: { key: Section; label: string; icon: string }[] = [
   { key: 'dashboard', label: 'Dashboard', icon: '\u25A6' },
   { key: 'orders', label: 'Active Orders', icon: '\u2691' },
   { key: 'sales', label: 'Sales', icon: '\u2197' },
+  { key: 'schedule', label: 'Schedule', icon: '\uD83D\uDD50' },
   { key: 'inventory', label: 'Inventory', icon: '\u2637' },
   { key: 'terminal', label: 'Terminal', icon: '\u25FB' },
 ];
@@ -122,6 +124,7 @@ export default function AdminLayout() {
           {section === 'dashboard' && <AdminDashboard onNavigate={setSection} />}
           {section === 'orders' && <AdminOrders />}
           {section === 'sales' && <AdminSales />}
+          {section === 'schedule' && <AdminSchedule />}
           {section === 'inventory' && <AdminInventory />}
           {section === 'terminal' && <AdminTerminal />}
         </div>

@@ -14,6 +14,7 @@
       { "source": "/api/catalog-update", "function": "catalogUpdate" },
       { "source": "/api/catalog-visibility", "function": "catalogVisibility" },
       { "source": "/api/sales-report", "function": "salesReport" },
+      { "source": "/api/order-schedule", "function": "orderSchedule" },
       { "source": "**", "destination": "/index.html" }
     ]
   },
