@@ -46,7 +46,7 @@ export default function AdminLayout() {
   const { user, role, loading: authLoading, signOut } = useAuth();
   const [section, setSection] = useState<Section>('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [soundEnabled, setSoundEnabled] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(true);
   const [newOrderCount, setNewOrderCount] = useState(0);
   const prevIds = useRef<Set<string>>(new Set());
 
